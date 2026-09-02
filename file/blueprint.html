@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <title>다이어리 프로젝트 - AS-IS / TO-BE Blueprint (노드 연결형)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            background: #fff;
+            margin: 0;
+            padding: 20px;
+            color: #1f2430;
+        }
+
+        .page-title {
+            text-align: center;
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .page-sub {
+            text-align: center;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 22px;
+        }
+
+        .wrap {
+            max-width: 1400px;
+            margin: 0 auto 26px;
+            border: 1px solid #ccc;
+            padding: 18px 22px 24px;
+            position: relative;
+            overflow-x: auto;
+        }
+
+        .section-tag {
+            position: absolute;
+            top: -14px;
+            left: 24px;
+            background: #1f2937;
+            color: #fff;
+            font-weight: 800;
+            font-size: 13px;
+            padding: 4px 14px;
+            border-radius: 14px;
+        }
+
+        .section-tag.tobe {
+            background: #b45309;
+        }
+
+        .header {
+            display: flex;
+            align-items: flex-start;
+            gap: 22px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #333;
+            margin-bottom: 14px;
+            margin-top: 6px;
+        }
+
+        .name-box {
+            background: #f3f3f3;
+            border: 1px solid #999;
+            padding: 14px 26px;
+            font-size: 20px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .title {
+            font-size: 19px;
+            font-weight: 700;
+            line-height: 1.4;
+            padding-top: 8px;
+        }
+
+        .legend {
+            margin-left: auto;
+            font-size: 12px;
+            line-height: 1.9;
+            white-space: nowrap;
+            padding-top: 4px;
+        }
+
+        .legend-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .lg-line {
+            display: inline-block;
+            width: 30px;
+            height: 0;
+            border-top: 2px solid #333;
+        }
+
+        .lg-line.blue {
+            border-top: 2px dashed #2563eb;
+        }
+
+        .lg-line.orange {
+            border-top: 2px dashed #e07b1a;
+        }
+
+        .lg-box {
+            display: inline-block;
+            width: 24px;
+            height: 14px;
+            border: 2px dashed #444;
+            border-radius: 2px;
+        }
+
+        .content {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+        }
+
+        .canvas {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .rowlabel {
+            position: absolute;
+            width: 96px;
+            left: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #333;
+            border-top: 1px solid #999;
+            border-bottom: 1px solid #999;
+            height: 74px;
+        }
+
+        .colhead {
+            position: absolute;
+            width: 150px;
+            text-align: center;
+            font-size: 11.8px;
+            font-weight: 700;
+            color: #444;
+        }
+
+        .node {
+            position: absolute;
+            width: 150px;
+            border-radius: 4px;
+            padding: 6px 8px;
+            font-size: 11.3px;
+            line-height: 1.35;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            border: 1px solid transparent;
+        }
+
+        .n-physical {
+            background: #d5e8d4;
+            border-color: #9dbb8f;
+        }
+
+        .n-customer {
+            background: #ffffff;
+            border-color: #bbb;
+        }
+
+        .n-front {
+            background: #ffe6cc;
+            border-color: #d79b52;
+        }
+
+        .n-back {
+            background: #dae8fc;
+            border-color: #6c8ebf;
+        }
+
+        .n-support {
+            background: #e1d5e7;
+            border-color: #9673a6;
+        }
+
+        .n-faint {
+            opacity: 0.5;
+        }
+
+        .n-empty {
+            border: none;
+            background: none;
+        }
+
+        .outline-1 {
+            outline: 2px dashed #e07b1a;
+            outline-offset: 2px;
+        }
+
+        .outline-2 {
+            outline: 2px dashed #2563eb;
+            outline-offset: 2px;
+        }
+
+        .outline-3 {
+            outline: 2px dashed #16a34a;
+            outline-offset: 2px;
+        }
+
+        .outline-4 {
+            outline: 2px dashed #dc2626;
+            outline-offset: 2px;
+        }
+
+        .outline-5 {
+            outline: 2px dashed #ca8a04;
+            outline-offset: 2px;
+        }
+
+        .outline-6 {
+            outline: 2px dashed #0891b2;
+            outline-offset: 2px;
+        }
+
+        .outline-p {
+            outline: 2px dashed #8b5cf6;
+            outline-offset: 2px;
+        }
+
+        .badge {
+            position: absolute;
+            top: -11px;
+            left: -11px;
+            width: 23px;
+            height: 23px;
+            border-radius: 50%;
+            color: #fff;
+            font-weight: 700;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+            z-index: 3;
+        }
+
+        .b1 {
+            background: #e07b1a;
+        }
+
+        .b2 {
+            background: #2563eb;
+        }
+
+        .b3 {
+            background: #16a34a;
+        }
+
+        .b4 {
+            background: #dc2626;
+        }
+
+        .b5 {
+            background: #ca8a04;
+        }
+
+        .b6 {
+            background: #0891b2;
+        }
+
+        .bp {
+            background: #8b5cf6;
+        }
+
+        .band {
+            position: absolute;
+            left: 96px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 800;
+            border: 1px dashed #999;
+            color: #777;
+            background: repeating-linear-gradient(135deg, #f5f5f5, #f5f5f5 10px, #ececec 10px, #ececec 20px);
+        }
+
+        .band.problem {
+            border-color: #d33;
+            color: #a33;
+            background: repeating-linear-gradient(135deg, #fde8e8, #fde8e8 10px, #fbd5d5 10px, #fbd5d5 20px);
+        }
+
+        .canvas-outer {
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .canvas-scale {
+            transform-origin: top left;
+        }
+
+        svg.arrows {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        .tag-chip {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 8px;
+            color: #fff;
+            margin-left: 3px;
+        }
+
+        .chip-cut {
+            background: #d33;
+        }
+
+        .chip-keep {
+            background: #2e7d32;
+        }
+
+        .chip-rebundle {
+            background: #7c3aed;
+        }
+
+        .sidebar {
+            width: 290px;
+            border: 1px solid #999;
+            padding: 14px 16px;
+            font-size: 12.4px;
+            line-height: 1.5;
+            flex-shrink: 0;
+        }
+
+        .sidebar .intro {
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .sidebar .item {
+            margin-bottom: 10px;
+        }
+
+        .sidebar .item b {
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .dot {
+            display: inline-block;
+        }
+
+        .bottom-box {
+            margin-top: 16px;
+            border: 2px solid #d33;
+            padding: 12px 16px;
+            font-size: 15.5px;
+            font-weight: 700;
+            text-align: center;
+            color: #222;
+        }
+
+        .bottom-box.tobe {
+            border-color: #b45309;
+        }
+
+        .transition-arrow {
+            text-align: center;
+            font-size: 32px;
+            color: #b45309;
+            margin: -8px 0 -4px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="page-title">다이어리 프로젝트 — AS-IS → TO-BE Blueprint (노드 연결형)</div>
+    <div class="page-sub">ADHD 타겟 · 대화형 자동 기록 시스템 &nbsp;|&nbsp; 은별</div>
+
+    <!-- ============================================================ AS-IS ============================================================ -->
+    <div class="wrap">
+        <div class="section-tag">AS-IS</div>
+        <div class="header">
+            <div class="name-box">은별</div>
+            <div class="title">주제 : 수기(手記) 다이어리 쓰기 과정<br><span style="font-size:12.5px;font-weight:400;color:#666;">일반적인
+                    종이 다이어리 작성 흐름 — 실제 선행관계 표시</span></div>
+            <div class="legend">
+                <div class="legend-row"><span class="lg-line"></span><span>: 주요 흐름</span></div>
+                <div class="legend-row"><span class="lg-line blue"></span><span>: 참조(자동연동 없음)</span></div>
+                <div class="legend-row"><span class="tag-chip chip-cut">CUT</span><span>: 도려낼 칸</span></div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="canvas-outer" style="width:990px; height:420px;">
+                <div class="canvas canvas-scale" style="width:1650px; height:700px; transform:scale(0.6);">
+
+                    <!-- column headers -->
+                    <div class="colhead" style="left:115px; top:14px;">소비 발생</div>
+                    <div class="colhead" style="left:305px; top:14px;">일정 발생</div>
+                    <div class="colhead" style="left:495px; top:14px;">일상 사건</div>
+                    <div class="colhead" style="left:685px; top:14px;">저녁 시간 확보</div>
+                    <div class="colhead" style="left:875px; top:14px;">회상</div>
+                    <div class="colhead" style="left:1065px; top:14px;">선별·구조화</div>
+                    <div class="colhead" style="left:1255px; top:14px;">손으로 서술</div>
+                    <div class="colhead" style="left:1445px; top:14px;">완료 처리</div>
+
+                    <!-- row labels -->
+                    <div class="rowlabel" style="top:40px;">physical<br>evidence</div>
+                    <div class="rowlabel" style="top:160px;">Customer<br>Action</div>
+                    <div class="rowlabel" style="top:295px;">front<br>stage</div>
+                    <div class="rowlabel" style="top:385px;">back<br>stage</div>
+                    <div class="rowlabel" style="top:530px;">Support<br>Stage</div>
+
+                    <!-- bands: front / back stage 없음 -->
+                    <div class="band" style="top:280px; width:1470px; height:90px;">Front / Back Stage 해당 없음 — 셀프서비스라
+                        "응대·처리하는 주체" 자체가 존재하지 않음</div>
+                    <div class="band problem" style="top:378px; width:1470px; height:100px; font-size:14px;">★ 핵심 문제:
+                        Back Stage 부재 — 회상·선별·구조화·서술 부담이 전부 사용자 개인에게 있음</div>
+
+                    <!-- physical evidence nodes -->
+                    <div class="node n-physical" style="left:115px; top:40px;">가계부 앱 UI<span
+                            class="tag-chip chip-cut">CUT</span></div>
+                    <div class="node n-physical" style="left:305px; top:40px;">캘린더 앱 UI<span
+                            class="tag-chip chip-cut">CUT</span></div>
+                    <div class="node n-physical n-faint" style="left:495px; top:40px;">(캡처 수단 없음)</div>
+                    <div class="node n-physical" style="left:685px; top:40px;">다이어리 노트 + 펜<span
+                            class="tag-chip chip-cut">CUT</span></div>
+                    <div class="node n-physical n-faint" style="left:875px; top:40px;">—</div>
+                    <div class="node n-physical n-faint" style="left:1065px; top:40px;">—</div>
+                    <div class="node n-physical" style="left:1255px; top:40px;">펼쳐진 다이어리 노트<span
+                            class="tag-chip chip-cut">CUT</span></div>
+                    <div class="node n-physical" style="left:1445px; top:40px;">덮인 다이어리 노트<span
+                            class="tag-chip chip-keep">KEEP</span></div>
+
+                    <!-- customer action nodes -->
+                    <div class="node n-customer" id="ca-a" style="left:115px; top:160px;">가계부 앱에<br>별도 입력<span
+                            class="tag-chip chip-cut">CUT</span></div>
+                    <div class="node n-customer" id="ca-b" style="left:305px; top:160px;">캘린더 앱에<br>별도 입력<span
+                            class="tag-chip chip-cut">CUT</span></div>
+                    <div class="node n-customer" id="ca-c" style="left:495px; top:160px;">기억에만<br>담아둠<span
+                            class="tag-chip chip-cut">CUT</span></div>
+                    <div class="node n-customer" id="ca-d" style="left:685px; top:160px;">시간 내서<br>앉음<span
+                            class="tag-chip chip-cut">CUT</span></div>
+                    <div class="node n-customer" id="ca-e" style="left:875px; top:160px;">하루 회상<span
+                            class="tag-chip chip-cut">CUT</span></div>
+                    <div class="node n-customer" id="ca-f" style="left:1065px; top:160px;">내용 선별·<br>구조화<span
+                            class="tag-chip chip-cut">CUT</span></div>
+                    <div class="node n-customer" id="ca-g" style="left:1255px; top:160px;">손글씨로<br>서술<span
+                            class="tag-chip chip-cut">CUT</span></div>
+                    <div class="node n-customer" id="ca-h" style="left:1445px; top:160px;">다 쓰고 덮기<br>(완료 인지)<span
+                            class="tag-chip chip-keep">KEEP</span></div>
+
+                    <!-- support stage nodes -->
+                    <div class="node n-support" style="left:115px; top:530px;">가계부 앱<br>서버/DB<span
+                            class="tag-chip chip-cut">CUT</span></div>
+                    <div class="node n-support" style="left:305px; top:530px;">캘린더 앱<br>서버/DB<span
+                            class="tag-chip chip-cut">CUT</span></div>
+                    <div class="node n-support n-faint" style="left:495px; top:530px;">—</div>
+                    <div class="node n-support" style="left:685px; top:530px;">문구점<br>(노트·펜 유통)</div>
+                    <div class="node n-support n-faint" style="left:875px; top:530px;">—</div>
+                    <div class="node n-support n-faint" style="left:1065px; top:530px;">—</div>
+                    <div class="node n-support n-faint" style="left:1255px; top:530px;">(동일 노트·펜)</div>
+                    <div class="node n-support" style="left:1445px; top:530px;">책장/서랍<br>(보관)</div>
+
+                    <svg class="arrows" width="1650" height="700" viewBox="0 0 1650 700">
+                        <defs>
+                            <marker id="ah-black" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                                <path d="M0,0 L6,3 L0,6 Z" fill="#333" />
+                            </marker>
+                            <marker id="ah-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                                <path d="M0,0 L6,3 L0,6 Z" fill="#2563eb" />
+                            </marker>
+                        </defs>
+
+                        <!-- physical -> customer action (vertical) -->
+                        <path d="M190,80 L190,160" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#ah-black)" />
+                        <path d="M380,80 L380,160" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#ah-black)" />
+                        <path d="M760,80 L760,160" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#ah-black)" />
+                        <path d="M1330,80 L1330,160" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#ah-black)" />
+                        <path d="M1520,80 L1520,160" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#ah-black)" />
+
+                        <!-- convergence into 회상(E): A,B dashed(참조), C,D solid -->
+                        <path d="M265,178 L875,196" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,4"
+                            fill="none" marker-end="url(#ah-blue)" />
+                        <path d="M455,178 L875,204" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,4"
+                            fill="none" marker-end="url(#ah-blue)" />
+                        <path d="M645,196 L875,196" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#ah-black)" />
+                        <path d="M835,196 L875,196" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#ah-black)" />
+
+                        <!-- sequential E -> F -> G -> H -->
+                        <path d="M1025,196 L1065,196" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#ah-black)" />
+                        <path d="M1215,196 L1255,196" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#ah-black)" />
+                        <path d="M1405,196 L1445,196" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#ah-black)" />
+
+                        <!-- customer action -> support (vertical, passes through band area) -->
+                        <path d="M190,234 L190,530" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#ah-black)" />
+                        <path d="M380,234 L380,530" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#ah-black)" />
+                        <path d="M760,234 L760,530" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#ah-black)" />
+                        <path d="M1520,234 L1520,530" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#ah-black)" />
+                    </svg>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="intro">칸 단위로 쪼개고 실제 선행관계를 그려보니, 가계부·캘린더 앱(파랑 점선)은 다이어리 작성 시점에 자동으로 연동되지 않고 사용자가 "다시 들여다봐야"
+                    회상에 반영된다는 게 드러남.</div>
+                <div class="item"><b>파랑 점선 = 참조뿐, 자동연동 없음</b>가계부/캘린더 앱에 입력한 내용이 저녁 회상 때 자동으로 안 넘어옴 → 사용자가 두 번 일함</div>
+                <div class="item"><b>CUT 6칸 / KEEP 2칸</b>실질적 노동(회상·선별·서술)과 이중입력(가계부/캘린더)이 도려낼 대상</div>
+                <div class="item"><b>★ Back Stage 부재</b>제공자가 없는 셀프서비스 구조라 이 영역 자체가 비어있었음 — TO-BE에서 AI가 처음 채우는 지점</div>
+            </div>
+        </div>
+
+        <div class="bottom-box">8칸 중 6칸 CUT · 2칸 KEEP · 파랑 점선(참조뿐)이 보여주는 "이중 입력" 문제가 핵심 리번들링 대상</div>
+    </div>
+
+    <div class="transition-arrow">⬇</div>
+
+    <!-- ============================================================ TO-BE ============================================================ -->
+    <div class="wrap">
+        <div class="section-tag tobe">TO-BE</div>
+        <div class="header">
+            <div class="name-box">은별</div>
+            <div class="title">주제 : AI 다이어리 작성 앱<br><span style="font-size:12.5px;font-weight:400;color:#666;">ADHD 타겟 ·
+                    대화형 자동 기록 시스템 — 실제 선행관계 표시</span></div>
+            <div class="legend">
+                <div class="legend-row"><span class="lg-line"></span><span>: 주요 업무 흐름</span></div>
+                <div class="legend-row"><span class="lg-line blue"></span><span>: 데이터 흐름</span></div>
+                <div class="legend-row"><span class="lg-line orange"></span><span>: 예외/대체·루프 흐름</span></div>
+                <div class="legend-row"><span class="lg-box"></span><span>: 에이전트 개입 영역(번호별 색상)</span></div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="canvas-outer" style="width:990px; height:480px;">
+                <div class="canvas canvas-scale" style="width:1650px; height:800px; transform:scale(0.6);">
+
+                    <!-- column headers -->
+                    <div class="colhead" style="left:155px; top:20px;">① 캐릭터 온보딩</div>
+                    <div class="colhead" style="left:355px; top:20px;">② 일일 기록 입력</div>
+                    <div class="colhead" style="left:555px; top:20px;">③ 자동 구조화</div>
+                    <div class="colhead" style="left:755px; top:20px;">다이어리 초안 생성</div>
+                    <div class="colhead" style="left:955px; top:20px;">④ 검토·수정</div>
+                    <div class="colhead" style="left:1155px; top:20px;">⑤ 저장·아카이브</div>
+                    <div class="colhead" style="left:1355px; top:20px;">⑥ 공백 후 재참여</div>
+
+                    <!-- row labels -->
+                    <div class="rowlabel" style="top:110px;">physical<br>evidence</div>
+                    <div class="rowlabel" style="top:230px;">Customer<br>Action</div>
+                    <div class="rowlabel" style="top:350px;">front<br>stage</div>
+                    <div class="rowlabel" style="top:480px;">back<br>stage</div>
+                    <div class="rowlabel" style="top:610px;">Support<br>Stage</div>
+
+                    <!-- physical evidence -->
+                    <div class="node n-physical" style="left:155px; top:110px; position:absolute;"><span
+                            class="badge b1">1</span>캐릭터 생성 대화 UI + 이미지</div>
+                    <div class="node n-physical" style="left:355px; top:110px;">채팅/음성 입력창</div>
+                    <div class="node n-physical n-faint" style="left:555px; top:110px;">(로딩 인디케이터)</div>
+                    <div class="node n-physical" style="left:755px; top:110px; position:absolute;"><span
+                            class="badge bp">P</span>다이어리 카드 UI + 사각사각 소리·필사 애니메이션</div>
+                    <div class="node n-physical" style="left:955px; top:110px;">편집 가능한 다이어리 텍스트</div>
+                    <div class="node n-physical" style="left:1155px; top:110px; position:absolute;"><span
+                            class="badge b5">5</span>캘린더 뷰 + 마일스톤 배지</div>
+                    <div class="node n-physical" style="left:1355px; top:110px;">복귀 시 인사말 화면</div>
+
+                    <!-- customer action -->
+                    <div class="node n-customer" id="c1" style="left:155px; top:230px;">질문에 답변<br>(성격·관심사)</div>
+                    <div class="node n-customer" id="c2" style="left:355px; top:230px;">소비/일정/사건<br>말하기(텍스트·음성)</div>
+                    <div class="node n-customer n-faint" id="c3" style="left:555px; top:230px;">대기</div>
+                    <div class="node n-customer" id="c4" style="left:755px; top:230px;">생성된 다이어리<br>확인</div>
+                    <div class="node n-customer" id="c5" style="left:955px; top:230px;">수정요청 또는<br>넘어가기(선택)</div>
+                    <div class="node n-customer" id="c6" style="left:1155px; top:230px;">기록 열람,<br>쿠폰으로 캐릭터 교체</div>
+                    <div class="node n-customer" id="c7" style="left:1355px; top:230px;">며칠 만에<br>앱 재실행</div>
+
+                    <!-- front stage -->
+                    <div class="node n-front outline-1" id="f1" style="left:155px; top:350px;">AI가 질문 던지며<br>대화 진행·분기
+                    </div>
+                    <div class="node n-front outline-2" id="f2" style="left:355px; top:350px; position:absolute;"><span
+                            class="badge b2">2</span>캐릭터 리액션,<br>필수정보(금액)만 확인</div>
+                    <div class="node n-front n-empty" id="f3" style="left:555px; top:350px;"></div>
+                    <div class="node n-front outline-p" id="f4" style="left:755px; top:350px;">캐릭터가 사각사각<br>소리내며 "필사"하듯
+                        생성</div>
+                    <div class="node n-front outline-4" id="f5" style="left:955px; top:350px; position:absolute;"><span
+                            class="badge b4">4</span>요청 시 캐릭터가<br>반영해 재작성</div>
+                    <div class="node n-front" id="f6" style="left:1155px; top:350px;">누적 마일스톤<br>배지 표시</div>
+                    <div class="node n-front outline-6" id="f7" style="left:1355px; top:350px; position:absolute;"><span
+                            class="badge b6">6</span>빠진 기간 언급 없이<br>자연스럽게 대화 재개</div>
+
+                    <!-- back stage -->
+                    <div class="node n-back" id="b1" style="left:155px; top:480px;">성격·어투 추출 →<br>페르소나 프로필 생성</div>
+                    <div class="node n-back outline-3" id="b2" style="left:355px; top:480px; position:absolute;"><span
+                            class="badge b3">3</span>STT 변환 →<br>개체 추출·분류</div>
+                    <div class="node n-back outline-3" id="b3" style="left:555px; top:480px;">구조화 +<br>문단 초안 생성</div>
+                    <div class="node n-back" id="b4" style="left:755px; top:480px;">문단+데이터 매핑,<br>톤 일관성 검증</div>
+                    <div class="node n-back" id="b5" style="left:955px; top:480px;">피드백 반영<br>재생성</div>
+                    <div class="node n-back outline-5" id="b6" style="left:1155px; top:480px;">누적 계산 →<br>마일스톤 쿠폰 지급
+                    </div>
+                    <div class="node n-back outline-6" id="b7" style="left:1355px; top:480px;">이관(migration) 로직 -<br>밀린
+                        일정 재정렬</div>
+
+                    <!-- support stage -->
+                    <div class="node n-support" style="left:155px; top:610px;">Gemini API<br>persona 테이블</div>
+                    <div class="node n-support" style="left:355px; top:610px;">STT·Gemini API<br>raw log 저장</div>
+                    <div class="node n-support" style="left:555px; top:610px;">서버리스 함수<br>(Vercel Python)</div>
+                    <div class="node n-support" style="left:755px; top:610px;">diary_entries<br>테이블</div>
+                    <div class="node n-support" style="left:955px; top:610px;">Gemini API<br>버전 업데이트</div>
+                    <div class="node n-support" style="left:1155px; top:610px;">coupon 테이블<br>DB 인덱싱</div>
+                    <div class="node n-support" style="left:1355px; top:610px;">마지막 접속일 조회<br>알림(옵트인) 발송</div>
+
+                    <svg class="arrows" width="1650" height="800" viewBox="0 0 1650 800">
+                        <defs>
+                            <marker id="a-black" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                                <path d="M0,0 L6,3 L0,6 Z" fill="#333" />
+                            </marker>
+                            <marker id="a-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                                <path d="M0,0 L6,3 L0,6 Z" fill="#2563eb" />
+                            </marker>
+                            <marker id="a-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                                <path d="M0,0 L6,3 L0,6 Z" fill="#e07b1a" />
+                            </marker>
+                        </defs>
+
+                        <!-- main flow: solid black -->
+                        <path d="M230,350 L230,308" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M230,308 L310,308 L310,480 L230,480" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M230,480 L310,480 L310,150 L230,150" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M310,149 L330,149 L330,269 L350,269" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M430,308 L430,350" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M430,428 L430,480" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M510,519 L550,519" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M710,519 L750,519" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M755,519 L730,519 L730,148 L750,148" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M830,189 L830,229" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M910,268 L950,268" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M1030,308 L1030,350" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M1030,428 L1030,480" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M1110,519 L1130,519 L1130,149 L1110,149" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M1110,149 L1150,149" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M1230,189 L1230,229" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M1310,268 L1330,268 L1330,519 L1310,519" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M1430,480 L1430,428" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+                        <path d="M1350,389 L1330,389 L1330,149 L1350,149" stroke="#333" stroke-width="1.6" fill="none"
+                            marker-end="url(#a-black)" />
+
+                        <!-- data flow: dashed blue -->
+                        <path d="M230,610 L230,558" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,4"
+                            fill="none" marker-end="url(#a-blue)" />
+                        <path d="M430,610 L430,558" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,4"
+                            fill="none" marker-end="url(#a-blue)" />
+                        <path d="M630,610 L630,558" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,4"
+                            fill="none" marker-end="url(#a-blue)" />
+                        <path d="M830,610 L830,558" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,4"
+                            fill="none" marker-end="url(#a-blue)" />
+                        <path d="M1030,610 L1030,558" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,4"
+                            fill="none" marker-end="url(#a-blue)" />
+                        <path d="M1230,610 L1230,558" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,4"
+                            fill="none" marker-end="url(#a-blue)" />
+                        <path d="M1430,610 L1430,558" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,4"
+                            fill="none" marker-end="url(#a-blue)" />
+                        <path d="M230,558 L230,585 L830,585 L830,558" stroke="#2563eb" stroke-width="1.5"
+                            stroke-dasharray="5,4" fill="none" marker-end="url(#a-blue)" />
+
+                        <!-- exception / loop flow: dashed orange -->
+                        <path d="M1310,519 L1330,519 L1330,60 L230,60 L230,109" stroke="#e07b1a" stroke-width="1.6"
+                            stroke-dasharray="6,4" fill="none" marker-end="url(#a-orange)" />
+                        <path d="M1430,109 L1430,75 L430,75 L430,229" stroke="#e07b1a" stroke-width="1.6"
+                            stroke-dasharray="6,4" fill="none" marker-end="url(#a-orange)" />
+                        <path d="M1510,268 L1530,268 L1530,610 L1510,610" stroke="#e07b1a" stroke-width="1.6"
+                            stroke-dasharray="6,4" fill="none" marker-end="url(#a-orange)" />
+                    </svg>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="intro">굵은 화살표는 실제 진행 순서, 파랑 점선은 데이터 참조, 주황 점선은 예외·루프 흐름이에요.</div>
+                <div class="item"><b><span style="color:#e07b1a;">●</span> ① 캐릭터 온보딩</b>대화로 페르소나 생성 → 이후 일상 기록 단계로 진입
+                </div>
+                <div class="item"><b><span style="color:#2563eb;">●</span> ② 필수정보만 확인</b>금액 등 필수값만 되묻고 나머지는 자동 추정</div>
+                <div class="item"><b><span style="color:#16a34a;">●</span> ③ STT+구조화</b>음성/텍스트 → 개체추출 → 문단 초안까지 자동 연결
+                </div>
+                <div class="item"><b><span style="color:#dc2626;">●</span> ④ 재작성</b>요청 시에만 캐릭터가 반영해 다시 씀</div>
+                <div class="item"><b><span style="color:#ca8a04;">●</span> ⑤ 캐릭터 쿠폰</b>누적 마일스톤 도달 시 쿠폰 지급 → <span
+                        style="color:#e07b1a;">주황 점선</span>으로 온보딩까지 루프</div>
+                <div class="item"><b><span style="color:#0891b2;">●</span> ⑥ 재참여</b>공백 후 복귀 시 마지막 접속일 조회 → 자연스러운 재개 →
+                    <span style="color:#e07b1a;">주황 점선</span>으로 일상기록 루프
+                </div>
+                <div class="item" style="border-top:1px dashed #999; padding-top:10px;"><b><span
+                            style="color:#8b5cf6;">●</span> P. 노트·펜의 촉감 대체</b>As-Is에서 도려낸(CUT) "쓰는 감각"을, 캐릭터가 사각사각 연필
+                    소리와 필사 애니메이션을 내며 다이어리를 쓰는 연출로 보완 — 정서적 가치를 감각적으로 재현</div>
+            </div>
+        </div>
+
+        <div class="bottom-box tobe">주 흐름(검정) · 데이터 흐름(파랑 점선) · 예외/루프 흐름(주황 점선)으로 노드 간 실제 선행관계를 표시</div>
+    </div>
+
+</body>
+
+</html>
