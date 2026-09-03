@@ -46,10 +46,14 @@ export interface RawLog {
   created_at: string
 }
 
-export interface StructureLogResponse {
-  transcript?: string
+export interface StructuredEntry {
   type: RawLogType
   content: RawLogContent
   isEstimated: boolean
   missingRequired: boolean
+}
+
+export interface StructureLogResponse {
+  transcript?: string
+  entries: StructuredEntry[]
 }
