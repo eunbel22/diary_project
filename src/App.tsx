@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AuthScreen } from './components/AuthScreen'
 import { DailyLogInput } from './components/DailyLogInput'
+import { DiarySection } from './components/DiarySection'
 import { OnboardingChat } from './components/OnboardingChat'
 import { PersonaAvatar } from './components/PersonaAvatar'
 import { useSession } from './hooks/useSession'
@@ -25,6 +26,8 @@ function Home({ persona, onSignOut }: { persona: Persona; onSignOut: () => void 
       <div className="mt-6 w-full">
         <DailyLogInput userId={persona.user_id} />
       </div>
+
+      <DiarySection userId={persona.user_id} personaName={persona.name} personaTone={persona.tone} />
 
       <button
         type="button"

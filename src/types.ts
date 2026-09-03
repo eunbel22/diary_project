@@ -57,3 +57,13 @@ export interface StructureLogResponse {
   transcript?: string
   entries: StructuredEntry[]
 }
+
+export interface DiaryEntry {
+  id: string
+  user_id: string
+  date: string
+  body: string
+  version: number
+  created_at: string
+  updated_at: string
+}
