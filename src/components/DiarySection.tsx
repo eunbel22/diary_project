@@ -195,7 +195,7 @@ export function DiarySection({ userId, personaName, personaTone }: Props) {
   if (loadingInitial) return null
 
   return (
-    <div className="mt-4 w-full max-w-lg px-4">
+    <div className="mx-auto w-full max-w-lg px-4">
       {!entry && (
         <button
           type="button"

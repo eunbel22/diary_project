@@ -182,7 +182,7 @@ export function DailyLogInput({ userId }: Props) {
   }
 
   return (
-    <div className="w-full max-w-lg px-4">
+    <div className="mx-auto w-full max-w-lg px-4">
       <div className="rounded-2xl bg-white p-4 shadow-sm">
         {pendingQueue.length > 0 ? (
           <div className="flex flex-col gap-2">

@@ -122,7 +122,7 @@ export function ArchiveSection({ userId, personaName, personaTone, onPersonaUpda
   const couponsAvailable = coupon?.coupons_available ?? 0
 
   return (
-    <div className="mt-4 w-full max-w-lg px-4">
+    <div className="mx-auto w-full max-w-lg px-4">
       <div className="rounded-2xl bg-white p-4 shadow-sm">
         <p className="text-sm text-stone-600">지금까지 다이어리 {entryCount}개를 남겼어요.</p>
 
