@@ -1,6 +1,6 @@
 import type { ChatMessage, OnboardingTurnResponse } from '../src/types'
 
-const GEMINI_MODEL = 'gemini-2.5-flash'
+const GEMINI_MODEL = 'gemini-3.5-flash-lite'
 
 const SYSTEM_PROMPT = `당신은 다이어리 앱의 캐릭터를 만들기 위해 사용자와 대화하는 온보딩 도우미입니다.
 목표: 몇 번의 짧은 대화로 사용자의 성격, 말투 취향, 관심사를 파악해 캐릭터(페르소나)의 이름·말투·관심사를 정합니다.
