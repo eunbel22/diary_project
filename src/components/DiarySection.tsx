@@ -14,9 +14,16 @@ function todayISO() {
   return local.toISOString().slice(0, 10)
 }
 
+// Safari 구버전은 접두사가 붙은 생성자만 지원한다.
+type AudioContextConstructor = typeof AudioContext
+function getAudioContextConstructor(): AudioContextConstructor | null {
+  const w = window as typeof window & { webkitAudioContext?: AudioContextConstructor }
+  return w.AudioContext ?? w.webkitAudioContext ?? null
+}
+
 // 실제 오디오 파일 없이, 짧은 필터링된 노이즈로 연필 긁는 느낌의 틱 소리를 합성한다.
 function playScratchTick(ctx: AudioContext) {
-  const duration = 0.05
+  const duration = 0.06
   const bufferSize = Math.max(1, Math.floor(duration * ctx.sampleRate))
   const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
   const data = buffer.getChannelData(0)
@@ -31,7 +38,7 @@ function playScratchTick(ctx: AudioContext) {
   filter.Q.value = 0.8
 
   const gain = ctx.createGain()
-  gain.gain.setValueAtTime(0.12, ctx.currentTime)
+  gain.gain.setValueAtTime(0.35, ctx.currentTime)
   gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration)
 
   noise.connect(filter).connect(gain).connect(ctx.destination)
@@ -77,8 +84,8 @@ export function DiarySection({ userId, personaName, personaTone }: Props) {
       if (i % 2 === 0 && entry.body[i - 1]?.trim() && audioCtxRef.current) {
         try {
           playScratchTick(audioCtxRef.current)
-        } catch {
-          // 오디오를 지원하지 않는 환경이면 조용히 넘어간다.
+        } catch (err) {
+          console.warn('사각사각 소리 재생 실패:', err)
         }
       }
 
@@ -94,13 +101,18 @@ export function DiarySection({ userId, personaName, personaTone }: Props) {
   const ensureAudioContext = () => {
     try {
       if (!audioCtxRef.current) {
-        audioCtxRef.current = new AudioContext()
+        const AudioContextClass = getAudioContextConstructor()
+        if (!AudioContextClass) {
+          console.warn('이 브라우저는 Web Audio API를 지원하지 않아요.')
+          return
+        }
+        audioCtxRef.current = new AudioContextClass()
       }
       if (audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume()
+        audioCtxRef.current.resume().catch((err) => console.warn('오디오 컨텍스트 재개 실패:', err))
       }
-    } catch {
-      // 오디오를 지원하지 않는 환경이면 무시한다.
+    } catch (err) {
+      console.warn('오디오 컨텍스트를 생성하지 못했어요:', err)
     }
   }
 
