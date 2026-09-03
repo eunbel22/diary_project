@@ -1,122 +1,73 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useState } from 'react'
+import { AuthScreen } from './components/AuthScreen'
+import { OnboardingChat } from './components/OnboardingChat'
+import { useSession } from './hooks/useSession'
+import { supabase } from './supabaseClient'
+import type { Persona } from './types'
+
+function LoadingScreen() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-amber-50">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-200 border-t-amber-500" />
+    </div>
+  )
+}
+
+function Home({ persona, onSignOut }: { persona: Persona; onSignOut: () => void }) {
+  return (
+    <div className="flex min-h-screen flex-col items-center gap-4 bg-amber-50 px-4 py-16 text-center">
+      {persona.image_url && (
+        <img
+          src={persona.image_url}
+          alt={persona.name}
+          className="h-32 w-32 rounded-full object-cover shadow-sm"
+        />
+      )}
+      <h1 className="text-xl font-semibold text-stone-800">{persona.name}</h1>
+      <p className="max-w-xs text-sm text-stone-500">{persona.tone}</p>
+      <p className="mt-6 text-xs text-stone-400">일일 기록 입력 기능은 곧 만나요.</p>
+      <button
+        type="button"
+        onClick={onSignOut}
+        className="mt-8 text-xs text-stone-400 underline hover:text-stone-600"
+      >
+        로그아웃
+      </button>
+    </div>
+  )
+}
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { session, loading } = useSession()
+  const [persona, setPersona] = useState<Persona | null | undefined>(undefined)
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+  useEffect(() => {
+    if (!session) {
+      setPersona(undefined)
+      return
+    }
 
-      <div className="ticks"></div>
+    let cancelled = false
+    supabase
+      .from('persona')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setPersona((data as Persona | null) ?? null)
+      })
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+    return () => {
+      cancelled = true
+    }
+  }, [session])
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+  if (loading) return <LoadingScreen />
+  if (!session) return <AuthScreen />
+  if (persona === undefined) return <LoadingScreen />
+  if (!persona) return <OnboardingChat userId={session.user.id} onComplete={setPersona} />
+
+  return <Home persona={persona} onSignOut={() => supabase.auth.signOut()} />
 }
 
 export default App
