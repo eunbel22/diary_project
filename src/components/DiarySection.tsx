@@ -21,29 +21,34 @@ function getAudioContextConstructor(): AudioContextConstructor | null {
   return w.AudioContext ?? w.webkitAudioContext ?? null
 }
 
-// 실제 오디오 파일 없이, 짧은 필터링된 노이즈로 연필 긁는 느낌의 틱 소리를 합성한다.
+// 실제 오디오 파일 없이, 넓은 대역의 노이즈를 부드러운 엔벨로프로 감싸 연필 긁는 질감을 합성한다.
+// (특정 주파수를 강조하는 bandpass + 즉각적인 시작/감쇠는 또렷한 톤의 "딸깍" 소리가 되어
+// 타자기처럼 들리므로 피한다. highpass + 완만한 페이드인/아웃 + 매번 미세한 변주를 준다.)
 function playScratchTick(ctx: AudioContext) {
-  const duration = 0.06
+  const duration = 0.05 + Math.random() * 0.04
   const bufferSize = Math.max(1, Math.floor(duration * ctx.sampleRate))
   const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
   const data = buffer.getChannelData(0)
-  for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.3
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1
 
   const noise = ctx.createBufferSource()
   noise.buffer = buffer
 
   const filter = ctx.createBiquadFilter()
-  filter.type = 'bandpass'
-  filter.frequency.value = 2200
-  filter.Q.value = 0.8
+  filter.type = 'highpass'
+  filter.frequency.value = 700 + Math.random() * 700
+  filter.Q.value = 0.4
 
+  const now = ctx.currentTime
+  const peak = 0.18 + Math.random() * 0.12
   const gain = ctx.createGain()
-  gain.gain.setValueAtTime(0.35, ctx.currentTime)
-  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration)
+  gain.gain.setValueAtTime(0.0001, now)
+  gain.gain.linearRampToValueAtTime(peak, now + 0.006)
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration)
 
   noise.connect(filter).connect(gain).connect(ctx.destination)
-  noise.start()
-  noise.stop(ctx.currentTime + duration)
+  noise.start(now)
+  noise.stop(now + duration)
 }
 
 export function DiarySection({ userId, personaName, personaTone }: Props) {
