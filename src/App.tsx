@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AuthScreen } from './components/AuthScreen'
+import { DailyLogInput } from './components/DailyLogInput'
 import { OnboardingChat } from './components/OnboardingChat'
 import { PersonaAvatar } from './components/PersonaAvatar'
 import { useSession } from './hooks/useSession'
@@ -16,15 +17,19 @@ function LoadingScreen() {
 
 function Home({ persona, onSignOut }: { persona: Persona; onSignOut: () => void }) {
   return (
-    <div className="flex min-h-screen flex-col items-center gap-4 bg-amber-50 px-4 py-16 text-center">
-      <PersonaAvatar name={persona.name} imageUrl={persona.image_url} />
+    <div className="flex min-h-screen flex-col items-center gap-4 bg-amber-50 px-4 py-10 text-center">
+      <PersonaAvatar name={persona.name} imageUrl={persona.image_url} size={96} />
       <h1 className="text-xl font-semibold text-stone-800">{persona.name}</h1>
       <p className="max-w-xs text-sm break-words text-stone-500">{persona.tone}</p>
-      <p className="mt-6 text-xs text-stone-400">일일 기록 입력 기능은 곧 만나요.</p>
+
+      <div className="mt-6 w-full">
+        <DailyLogInput userId={persona.user_id} />
+      </div>
+
       <button
         type="button"
         onClick={onSignOut}
-        className="mt-8 text-xs text-stone-400 underline hover:text-stone-600"
+        className="mt-4 text-xs text-stone-400 underline hover:text-stone-600"
       >
         로그아웃
       </button>
