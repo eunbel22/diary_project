@@ -47,8 +47,24 @@ function Home({
 
       <button
         type="button"
-        onClick={onSignOut}
+        onClick={async () => {
+          const { data } = await supabase
+            .from('persona')
+            .update({ reminder_opt_in: !persona.reminder_opt_in })
+            .eq('user_id', persona.user_id)
+            .select()
+            .single()
+          if (data) onPersonaUpdated(data as Persona)
+        }}
         className="mt-4 text-xs text-stone-400 underline hover:text-stone-600"
+      >
+        저녁 리마인더 {persona.reminder_opt_in ? '끄기' : '켜기'}
+      </button>
+
+      <button
+        type="button"
+        onClick={onSignOut}
+        className="text-xs text-stone-400 underline hover:text-stone-600"
       >
         로그아웃
       </button>
