@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AuthScreen } from './components/AuthScreen'
 import { OnboardingChat } from './components/OnboardingChat'
+import { PersonaAvatar } from './components/PersonaAvatar'
 import { useSession } from './hooks/useSession'
 import { supabase } from './supabaseClient'
 import type { Persona } from './types'
@@ -16,13 +17,7 @@ function LoadingScreen() {
 function Home({ persona, onSignOut }: { persona: Persona; onSignOut: () => void }) {
   return (
     <div className="flex min-h-screen flex-col items-center gap-4 bg-amber-50 px-4 py-16 text-center">
-      {persona.image_url && (
-        <img
-          src={persona.image_url}
-          alt={persona.name}
-          className="h-32 w-32 rounded-full object-cover shadow-sm"
-        />
-      )}
+      <PersonaAvatar name={persona.name} imageUrl={persona.image_url} />
       <h1 className="text-xl font-semibold text-stone-800">{persona.name}</h1>
       <p className="max-w-xs text-sm text-stone-500">{persona.tone}</p>
       <p className="mt-6 text-xs text-stone-400">일일 기록 입력 기능은 곧 만나요.</p>
