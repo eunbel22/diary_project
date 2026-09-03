@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { supabase } from '../supabaseClient'
-import type { RawLog, RawLogContent, RawLogType, StructureLogResponse } from '../types'
+import type { RawLog, RawLogContent, RawLogType, StructuredEntry, StructureLogResponse } from '../types'
 
 interface Props {
   userId: string
@@ -43,7 +43,7 @@ export function DailyLogInput({ userId }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [recording, setRecording] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [pending, setPending] = useState<StructureLogResponse | null>(null)
+  const [pendingQueue, setPendingQueue] = useState<StructuredEntry[]>([])
   const [amountInput, setAmountInput] = useState('')
   const [logs, setLogs] = useState<RawLog[]>([])
 
@@ -64,19 +64,14 @@ export function DailyLogInput({ userId }: Props) {
     loadTodayLogs()
   }, [])
 
-  const saveLog = async (result: StructureLogResponse) => {
-    const content: RawLogContent = result.transcript
-      ? { ...result.content, raw_text: result.transcript }
-      : result.content
-
+  const saveEntry = async (entry: StructuredEntry) => {
     const { error: insertError } = await supabase.from('raw_log').insert({
       user_id: userId,
-      type: result.type,
-      content,
-      is_estimated: result.isEstimated,
+      type: entry.type,
+      content: entry.content,
+      is_estimated: entry.isEstimated,
     })
     if (insertError) throw insertError
-    await loadTodayLogs()
   }
 
   const handleDelete = async (id: string) => {
@@ -101,10 +96,23 @@ export function DailyLogInput({ userId }: Props) {
       if (!res.ok) throw new Error('구조화 요청이 실패했어요.')
 
       const result: StructureLogResponse = await res.json()
-      if (result.missingRequired) {
-        setPending(result)
+      const entries = result.entries.map((entry) =>
+        result.transcript
+          ? { ...entry, content: { ...entry.content, raw_text: result.transcript } }
+          : entry,
+      )
+
+      const ready = entries.filter((entry) => !entry.missingRequired)
+      const needsAmount = entries.filter((entry) => entry.missingRequired)
+
+      for (const entry of ready) {
+        await saveEntry(entry)
+      }
+      if (ready.length > 0) await loadTodayLogs()
+
+      if (needsAmount.length > 0) {
+        setPendingQueue(needsAmount)
       } else {
-        await saveLog(result)
         setInput('')
       }
     } catch (err) {
@@ -156,15 +164,17 @@ export function DailyLogInput({ userId }: Props) {
   }
 
   const handleConfirmAmount = async () => {
-    if (!pending || !amountInput.trim()) return
+    const [current, ...rest] = pendingQueue
+    if (!current || !amountInput.trim()) return
     const amount = Number(amountInput.replace(/[^0-9.]/g, ''))
     if (Number.isNaN(amount)) return
 
     try {
-      await saveLog({ ...pending, content: { ...pending.content, amount }, missingRequired: false })
-      setPending(null)
+      await saveEntry({ ...current, content: { ...current.content, amount }, missingRequired: false })
+      await loadTodayLogs()
       setAmountInput('')
-      setInput('')
+      setPendingQueue(rest)
+      if (rest.length === 0) setInput('')
     } catch (err) {
       setError('저장하는 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.')
       console.error(err)
@@ -174,9 +184,15 @@ export function DailyLogInput({ userId }: Props) {
   return (
     <div className="w-full max-w-lg px-4">
       <div className="rounded-2xl bg-white p-4 shadow-sm">
-        {pending ? (
+        {pendingQueue.length > 0 ? (
           <div className="flex flex-col gap-2">
-            <p className="text-sm text-stone-600">얼마 정도 썼는지만 알려줄래요?</p>
+            <p className="text-sm text-stone-600">
+              {pendingQueue[0].content.item ? `'${pendingQueue[0].content.item}' ` : ''}
+              얼마 정도 썼는지만 알려줄래요?
+            </p>
+            {pendingQueue.length > 1 && (
+              <p className="text-xs text-stone-400">확인할 소비가 아직 {pendingQueue.length}개 있어요</p>
+            )}
             <div className="flex gap-2">
               <input
                 type="number"
