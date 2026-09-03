@@ -3,6 +3,7 @@ export interface Persona {
   name: string
   tone: string
   image_url: string | null
+  reminder_opt_in: boolean
   created_at: string
 }
 

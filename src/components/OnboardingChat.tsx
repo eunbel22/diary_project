@@ -16,9 +16,10 @@ export function OnboardingChat({ userId, onComplete }: Props) {
   ])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
-  const [stage, setStage] = useState<'chat' | 'drawing' | 'error'>('chat')
+  const [stage, setStage] = useState<'chat' | 'drawing' | 'reminder' | 'error'>('chat')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [lastDraft, setLastDraft] = useState<PersonaDraft | null>(null)
+  const [createdPersona, setCreatedPersona] = useState<Persona | null>(null)
 
   const finishOnboarding = async (draft: PersonaDraft) => {
     setStage('drawing')
@@ -56,11 +57,34 @@ export function OnboardingChat({ userId, onComplete }: Props) {
 
       if (error || !data) throw error ?? new Error('페르소나 저장에 실패했어요.')
 
-      onComplete(data as Persona)
+      setCreatedPersona(data as Persona)
+      setStage('reminder')
     } catch (err) {
       setStage('error')
       setErrorMessage('캐릭터를 만드는 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.')
       console.error(err)
+    }
+  }
+
+  const handleReminderChoice = async (optIn: boolean) => {
+    if (!createdPersona) return
+    if (!optIn) {
+      onComplete(createdPersona)
+      return
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('persona')
+        .update({ reminder_opt_in: true })
+        .eq('user_id', userId)
+        .select()
+        .single()
+
+      onComplete(!error && data ? (data as Persona) : { ...createdPersona, reminder_opt_in: true })
+    } catch (err) {
+      console.error(err)
+      onComplete({ ...createdPersona, reminder_opt_in: true })
     }
   }
 
@@ -104,6 +128,32 @@ export function OnboardingChat({ userId, onComplete }: Props) {
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-amber-50 px-4 text-center">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-amber-200 border-t-amber-500" />
         <p className="text-sm text-stone-500">캐릭터를 그리고 있어요...</p>
+      </div>
+    )
+  }
+
+  if (stage === 'reminder') {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-amber-50 px-4 text-center">
+        <p className="max-w-xs text-sm text-stone-600">
+          매일 저녁, 살짝 알려드릴까요? 안 켜셔도 전혀 상관없어요.
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => handleReminderChoice(true)}
+            className="rounded-full bg-amber-500 px-4 py-2 text-sm font-medium text-white"
+          >
+            네, 알려주세요
+          </button>
+          <button
+            type="button"
+            onClick={() => handleReminderChoice(false)}
+            className="rounded-full bg-stone-100 px-4 py-2 text-sm text-stone-600"
+          >
+            괜찮아요
+          </button>
+        </div>
       </div>
     )
   }
