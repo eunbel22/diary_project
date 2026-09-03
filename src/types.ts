@@ -34,6 +34,7 @@ export interface RawLogContent {
   title?: string
   description?: string
   emotion?: string
+  raw_text?: string
 }
 
 export interface RawLog {

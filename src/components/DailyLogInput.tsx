@@ -65,13 +65,27 @@ export function DailyLogInput({ userId }: Props) {
   }, [])
 
   const saveLog = async (result: StructureLogResponse) => {
+    const content: RawLogContent = result.transcript
+      ? { ...result.content, raw_text: result.transcript }
+      : result.content
+
     const { error: insertError } = await supabase.from('raw_log').insert({
       user_id: userId,
       type: result.type,
-      content: result.content,
+      content,
       is_estimated: result.isEstimated,
     })
     if (insertError) throw insertError
+    await loadTodayLogs()
+  }
+
+  const handleDelete = async (id: string) => {
+    const { error: deleteError } = await supabase.from('raw_log').delete().eq('id', id)
+    if (deleteError) {
+      setError('삭제하는 중 문제가 생겼어요.')
+      console.error(deleteError)
+      return
+    }
     await loadTodayLogs()
   }
 
@@ -218,12 +232,30 @@ export function DailyLogInput({ userId }: Props) {
           {logs.map((log) => (
             <div
               key={log.id}
-              className="rounded-xl bg-white/70 px-4 py-2 text-left text-sm text-stone-600 shadow-sm"
+              className="rounded-xl bg-white/70 px-4 py-3 text-left text-sm text-stone-600 shadow-sm"
             >
-              <span className="mr-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
-                {TYPE_LABEL[log.type]}
-              </span>
-              {summarize(log.type, log.content)}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+                    {TYPE_LABEL[log.type]}
+                  </span>
+                  {log.is_estimated && <span className="text-xs text-stone-400">일부 추정 포함</span>}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(log.id)}
+                  className="text-xs text-stone-300 hover:text-stone-500"
+                  aria-label="기록 삭제"
+                >
+                  삭제
+                </button>
+              </div>
+              {log.content.raw_text && (
+                <p className="mt-1 break-words text-stone-700">{log.content.raw_text}</p>
+              )}
+              <p className="mt-0.5 break-words text-xs text-stone-400">
+                {summarize(log.type, log.content)}
+              </p>
             </div>
           ))}
         </div>
