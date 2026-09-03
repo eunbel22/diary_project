@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ArchiveSection } from './components/ArchiveSection'
 import { AuthScreen } from './components/AuthScreen'
 import { DailyLogInput } from './components/DailyLogInput'
 import { DiarySection } from './components/DiarySection'
@@ -16,7 +17,15 @@ function LoadingScreen() {
   )
 }
 
-function Home({ persona, onSignOut }: { persona: Persona; onSignOut: () => void }) {
+function Home({
+  persona,
+  onPersonaUpdated,
+  onSignOut,
+}: {
+  persona: Persona
+  onPersonaUpdated: (persona: Persona) => void
+  onSignOut: () => void
+}) {
   return (
     <div className="flex min-h-screen flex-col items-center gap-4 bg-amber-50 px-4 py-10 text-center">
       <PersonaAvatar name={persona.name} imageUrl={persona.image_url} size={96} />
@@ -28,6 +37,13 @@ function Home({ persona, onSignOut }: { persona: Persona; onSignOut: () => void 
       </div>
 
       <DiarySection userId={persona.user_id} personaName={persona.name} personaTone={persona.tone} />
+
+      <ArchiveSection
+        userId={persona.user_id}
+        personaName={persona.name}
+        personaTone={persona.tone}
+        onPersonaUpdated={onPersonaUpdated}
+      />
 
       <button
         type="button"
@@ -70,7 +86,7 @@ function App() {
   if (persona === undefined) return <LoadingScreen />
   if (!persona) return <OnboardingChat userId={session.user.id} onComplete={setPersona} />
 
-  return <Home persona={persona} onSignOut={() => supabase.auth.signOut()} />
+  return <Home persona={persona} onPersonaUpdated={setPersona} onSignOut={() => supabase.auth.signOut()} />
 }
 
 export default App

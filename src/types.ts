@@ -67,3 +67,12 @@ export interface DiaryEntry {
   created_at: string
   updated_at: string
 }
+
+export interface Coupon {
+  user_id: string
+  entry_count: number
+  milestone_reached: number
+  coupons_available: number
+  used_at: string | null
+  updated_at: string
+}
