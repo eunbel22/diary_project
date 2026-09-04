@@ -1,9 +1,13 @@
+export type AdhdScreeningResult = 'suspected' | 'not_suspected'
+
 export interface Persona {
   user_id: string
   name: string
   tone: string
   image_url: string | null
   reminder_opt_in: boolean
+  adhd_screening_result: AdhdScreeningResult | null
+  adhd_screening_completed_at: string | null
   created_at: string
 }
 
