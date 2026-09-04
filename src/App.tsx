@@ -7,6 +7,7 @@ import { DiaryTab } from './components/DiaryTab'
 import { OnboardingChat } from './components/OnboardingChat'
 import { PersonaAvatar } from './components/PersonaAvatar'
 import { ScheduleTab } from './components/ScheduleTab'
+import { SettingsTab } from './components/SettingsTab'
 import { TabBar } from './components/TabBar'
 import { useSession } from './hooks/useSession'
 import { supabase } from './supabaseClient'
@@ -17,6 +18,7 @@ const TABS = [
   { key: 'schedule', label: '일정', icon: '📅' },
   { key: 'consumption', label: '소비', icon: '💳' },
   { key: 'diary', label: '다이어리', icon: '📔' },
+  { key: 'settings', label: '설정', icon: '⚙️' },
 ] as const
 
 type TabKey = (typeof TABS)[number]['key']
@@ -40,43 +42,12 @@ function Home({
 }) {
   const [tab, setTab] = useState<TabKey>('today')
 
-  const toggleReminder = async () => {
-    const { data } = await supabase
-      .from('persona')
-      .update({ reminder_opt_in: !persona.reminder_opt_in })
-      .eq('user_id', persona.user_id)
-      .select()
-      .single()
-    if (data) onPersonaUpdated(data as Persona)
-  }
-
-  const toggleDiaryFormat = async () => {
-    const { data } = await supabase
-      .from('persona')
-      .update({ diary_format: persona.diary_format === 'list' ? 'paragraph' : 'list' })
-      .eq('user_id', persona.user_id)
-      .select()
-      .single()
-    if (data) onPersonaUpdated(data as Persona)
-  }
-
   return (
     <div className="flex min-h-screen flex-col bg-amber-50 pb-16">
       <header className="flex flex-col items-center gap-1 px-4 py-6 text-center">
         <PersonaAvatar name={persona.name} imageUrl={persona.image_url} size={72} />
         <h1 className="mt-1 text-lg font-semibold text-stone-800">{persona.name}</h1>
         <p className="max-w-xs text-xs break-words text-stone-500">{persona.tone}</p>
-        <div className="mt-2 flex gap-3">
-          <button type="button" onClick={toggleReminder} className="text-xs text-stone-400 underline hover:text-stone-600">
-            저녁 리마인더 {persona.reminder_opt_in ? '끄기' : '켜기'}
-          </button>
-          <button type="button" onClick={toggleDiaryFormat} className="text-xs text-stone-400 underline hover:text-stone-600">
-            다이어리 {persona.diary_format === 'list' ? '문단형으로' : '목록형으로'}
-          </button>
-          <button type="button" onClick={onSignOut} className="text-xs text-stone-400 underline hover:text-stone-600">
-            로그아웃
-          </button>
-        </div>
       </header>
 
       <main className="flex-1">
@@ -84,6 +55,9 @@ function Home({
         {tab === 'schedule' && <ScheduleTab userId={persona.user_id} />}
         {tab === 'consumption' && <ConsumptionTab userId={persona.user_id} />}
         {tab === 'diary' && <DiaryTab persona={persona} onPersonaUpdated={onPersonaUpdated} />}
+        {tab === 'settings' && (
+          <SettingsTab persona={persona} onPersonaUpdated={onPersonaUpdated} onSignOut={onSignOut} />
+        )}
       </main>
 
       <TabBar tabs={TABS} active={tab} onChange={setTab} />
