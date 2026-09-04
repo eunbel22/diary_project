@@ -51,7 +51,7 @@
 | 이미지 생성 | Gemini API (Imagen) | 캐릭터 이미지 최초 생성 + 쿠폰 재생성 (유료 — 호출 최소화할 것) |
 | 배포 | Vercel | 프론트엔드 + 서버리스 함수 호스팅 |
 | 서버리스 로직 | Vercel Functions | 자동 구조화 파이프라인 |
-| 알림 스케줄링 | Vercel Cron + Supabase Edge Function | 옵트인 리마인더 트리거 |
+| 알림 스케줄링 | Vercel Cron | 옵트인한 사용자 중 오늘 미기록자 계산(대상자 로그만 남김, 실제 발송은 의도적으로 미구현 — 아래 참고) |
 | 버전관리 | GitHub (eunbel22/diary_project) | 코드 관리 |
 
 **중요 원칙**:
@@ -96,14 +96,11 @@
 - Vercel 프로덕션 배포 (https://diary-app-snowy-psi.vercel.app)
 - Vercel 환경변수(`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) 등록
 
-⬜ 미완료 (다음 작업)
-- Supabase에 위 4개 테이블 실제 생성 (SQL 스키마 적용)
-- 온보딩 대화 컴포넌트 구현 (캐릭터 생성 플로우)
-- 일일 기록 입력 UI (텍스트/음성 입력창)
-- Gemini API 연동 (온보딩 대화 → NER → 다이어리 생성 파이프라인)
-- 다이어리 카드 UI + 필사 연출(사각사각 소리, 애니메이션)
-- 캘린더 뷰, 마일스톤/쿠폰 로직
-- 리마인더 옵트인 플로우 (Vercel Cron + Edge Function)
+- 온보딩 대화(캐릭터 생성), 일일 기록 입력 UI, Gemini API 연동(구조화·다이어리 생성), 다이어리 카드 + 필사 연출,
+  캘린더 뷰 + 마일스톤/쿠폰 로직 — 위 항목들은 이후 작업에서 모두 구현 완료됨
+- 리마인더 옵트인 UI + 대상자 계산(Vercel Cron)까지 구현. **실제 발송(이메일/푸시)은 의도적으로 붙이지 않기로 결정** —
+  ADHD 타겟 사용자에게 "알림"이 재촉·압박으로 읽힐 위험이 있고, 이 앱이 지향하는 포근함 컨셉과 맞지 않다고 판단함.
+  `api/reminder-candidates.ts`는 대상자 목록만 계산해 로그로 남기고 끝남.
 
 ---
 
