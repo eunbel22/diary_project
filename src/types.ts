@@ -60,8 +60,10 @@ export interface TaskStatus {
 }
 
 // schedule/task 조회 시 task_status를 함께 embed해서 받아올 때 쓰는 형태.
+// raw_log_id가 task_status의 기본키라 PostgREST가 1:1 관계로 인식해 배열이 아니라
+// 객체 하나(또는 null)로 내려준다.
 export interface RawLogWithStatus extends RawLog {
-  task_status?: { completed: boolean }[]
+  task_status?: { completed: boolean } | null
 }
 
 export interface StructuredEntry {

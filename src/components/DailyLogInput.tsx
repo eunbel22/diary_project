@@ -10,7 +10,8 @@ interface Props {
 interface CompletionCandidate {
   id: string
   content: RawLogContent
-  task_status?: { completed: boolean }[]
+  // raw_log_id가 task_status의 기본키라 PostgREST가 1:1로 인식해 객체(또는 null)로 내려준다.
+  task_status?: { completed: boolean } | null
 }
 
 const TYPE_LABEL: Record<RawLogType, string> = {
@@ -99,7 +100,7 @@ export function DailyLogInput({ userId }: Props) {
       let best: { id: string; score: number } | null = null
 
       for (const row of candidates) {
-        if (row.task_status?.[0]?.completed) continue
+        if (row.task_status?.completed) continue
         const title = row.content?.title
         if (!title) continue
         const score = diceSimilarity(subject, title)
