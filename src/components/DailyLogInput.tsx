@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { diceSimilarity } from '../lib/textSimilarity'
 import { supabase } from '../supabaseClient'
-import type { RawLog, RawLogContent, RawLogType, StructuredEntry, StructureLogResponse } from '../types'
+import type {
+  RawLog,
+  RawLogContent,
+  RawLogType,
+  RawLogWithStatus,
+  StructuredEntry,
+  StructureLogResponse,
+} from '../types'
 
 interface Props {
   userId: string
@@ -57,6 +64,9 @@ export function DailyLogInput({ userId }: Props) {
   const [pendingQueue, setPendingQueue] = useState<StructuredEntry[]>([])
   const [amountInput, setAmountInput] = useState('')
   const [logs, setLogs] = useState<RawLog[]>([])
+  const [overdueLogs, setOverdueLogs] = useState<RawLogWithStatus[]>([])
+  const [migrating, setMigrating] = useState(false)
+  const [migratePromptDismissed, setMigratePromptDismissed] = useState(false)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -71,9 +81,58 @@ export function DailyLogInput({ userId }: Props) {
     setLogs((data as RawLog[] | null) ?? [])
   }
 
+  // 며칠 만에 돌아와도 "빠진 기간"을 언급하지 않고, 밀린 일정·할일만 조용히 발견해서
+  // 오늘로 옮길지 한 번 제안한다(불렛저널의 "이관" 개념). 생일/기념일처럼 매년 반복되는
+  // 항목은 raw_log상 날짜가 지나 보여도 실제로는 밀린 게 아니라서 제외한다.
+  const loadOverdueLogs = async () => {
+    const today = todayISO()
+    const { data } = await supabase
+      .from('raw_log')
+      .select('*, task_status(completed)')
+      .eq('user_id', userId)
+      .in('type', ['schedule', 'task'])
+    const rows = (data as RawLogWithStatus[] | null) ?? []
+    const overdue = rows.filter((row) => {
+      if (row.content.recurring === 'yearly') return false
+      if (!row.content.date || row.content.date >= today) return false
+      return !(row.task_status?.completed ?? false)
+    })
+    setOverdueLogs(overdue)
+  }
+
   useEffect(() => {
     loadTodayLogs()
+    loadOverdueLogs()
   }, [])
+
+  // raw_log는 불변이라 날짜만 바꿔치기할 수 없으므로, 오늘 날짜로 새로 저장하고
+  // 기존 항목은 지운다.
+  const handleMigrateOverdue = async () => {
+    setMigrating(true)
+    try {
+      const today = todayISO()
+      for (const row of overdueLogs) {
+        const { error: insertError } = await supabase.from('raw_log').insert({
+          user_id: userId,
+          type: row.type,
+          content: { ...row.content, date: today },
+          is_estimated: row.is_estimated,
+        })
+        if (insertError) throw insertError
+
+        const { error: deleteError } = await supabase.from('raw_log').delete().eq('id', row.id)
+        if (deleteError) throw deleteError
+      }
+      setOverdueLogs([])
+      setMigratePromptDismissed(true)
+      await loadTodayLogs()
+    } catch (err) {
+      setError('밀린 일정을 옮기는 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.')
+      console.error(err)
+    } finally {
+      setMigrating(false)
+    }
+  }
 
   const saveEntry = async (entry: StructuredEntry) => {
     const { error: insertError } = await supabase.from('raw_log').insert({
@@ -233,6 +292,30 @@ export function DailyLogInput({ userId }: Props) {
 
   return (
     <div className="mx-auto w-full max-w-lg px-4">
+      {overdueLogs.length > 0 && !migratePromptDismissed && (
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl bg-amber-100 px-4 py-3 text-sm text-amber-800">
+          <span>밀린 게 {overdueLogs.length}개 있어요. 오늘로 옮길까요?</span>
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={handleMigrateOverdue}
+              disabled={migrating}
+              className="rounded-full bg-amber-500 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+            >
+              {migrating ? '옮기는 중...' : '오늘로 옮기기'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMigratePromptDismissed(true)}
+              disabled={migrating}
+              className="rounded-full bg-white px-3 py-1 text-xs text-amber-700"
+            >
+              괜찮아요
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-2xl bg-white p-4 shadow-sm">
         {pendingQueue.length > 0 ? (
           <div className="flex flex-col gap-2">
