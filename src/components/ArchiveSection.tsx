@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import type { Coupon, DiaryEntry, Persona } from '../types'
+import type { Coupon, DiaryEntry } from '../types'
 
 interface Props {
   userId: string
-  personaName: string
-  personaTone: string
-  onPersonaUpdated: (persona: Persona) => void
+  onStartRebuild: () => void
 }
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
@@ -30,7 +28,7 @@ function getMonthWeeks(year: number, month: number): (Date | null)[][] {
   return weeks
 }
 
-export function ArchiveSection({ userId, personaName, personaTone, onPersonaUpdated }: Props) {
+export function ArchiveSection({ userId, onStartRebuild }: Props) {
   const [viewDate, setViewDate] = useState(() => {
     const now = new Date()
     return new Date(now.getFullYear(), now.getMonth(), 1)
@@ -70,6 +68,8 @@ export function ArchiveSection({ userId, personaName, personaTone, onPersonaUpda
       })
   }, [viewDate])
 
+  // 쿠폰을 쓰면 이미지만 바꾸는 게 아니라, 대화를 통해 이름·말투까지 새로 만든다
+  // (PersonaRebuildChat). 여기서는 쿠폰 차감까지만 하고 그 대화로 넘긴다.
   const handleRedeem = async () => {
     setRedeeming(true)
     setRedeemError(null)
@@ -81,36 +81,10 @@ export function ArchiveSection({ userId, personaName, personaTone, onPersonaUpda
         return
       }
 
-      const res = await fetch('/api/generate-persona-image', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name: personaName, tone: personaTone }),
-      })
-      if (!res.ok) throw new Error('이미지 생성에 실패했어요.')
-
-      const { imageBase64, mimeType } = await res.json()
-      const bytes = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0))
-      const path = `${userId}/character.png`
-      const { error: uploadError } = await supabase.storage
-        .from('persona-images')
-        .upload(path, bytes, { contentType: mimeType ?? 'image/png', upsert: true })
-      if (uploadError) throw uploadError
-
-      const baseUrl = supabase.storage.from('persona-images').getPublicUrl(path).data.publicUrl
-      const imageUrl = `${baseUrl}?v=${Date.now()}`
-
-      const { data: updatedPersona, error: personaError } = await supabase
-        .from('persona')
-        .update({ image_url: imageUrl })
-        .eq('user_id', userId)
-        .select()
-        .single()
-      if (personaError) throw personaError
-
-      onPersonaUpdated(updatedPersona as Persona)
       await loadCoupon()
+      onStartRebuild()
     } catch (err) {
-      setRedeemError('캐릭터를 새로 그리는 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.')
+      setRedeemError('쿠폰을 사용하는 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.')
       console.error(err)
     } finally {
       setRedeeming(false)
@@ -134,7 +108,7 @@ export function ArchiveSection({ userId, personaName, personaTone, onPersonaUpda
               disabled={redeeming}
               className="rounded-full bg-amber-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
             >
-              {redeeming ? '새로 그리는 중...' : `쿠폰으로 캐릭터 새로 그리기 (${couponsAvailable}개)`}
+              {redeeming ? '준비하는 중...' : `쿠폰으로 캐릭터 다시 만들기 (${couponsAvailable}개)`}
             </button>
           </div>
         )}
