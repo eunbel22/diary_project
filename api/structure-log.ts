@@ -1,3 +1,5 @@
+import { CONSUMPTION_CATEGORIES } from '../src/types'
+
 const GEMINI_MODEL = 'gemini-3.5-flash-lite'
 
 function buildSystemPrompt(today: string) {
@@ -22,6 +24,9 @@ function buildSystemPrompt(today: string) {
 - item(항목), place(장소), time(시간), emotion(감정) 등 금액 외의 정보는 언급이 없으면 맥락에 맞게
   자연스럽게 추정해서 채우고, 절대 사용자에게 되묻지 않습니다. 하나라도 추정한 값이 있으면 그 항목의
   isEstimated를 true로 설정합니다.
+- consumption 항목에는 content.category를 반드시 다음 중 하나로 채웁니다: ${CONSUMPTION_CATEGORIES.join(
+    ', ',
+  )}. 애매하면 '기타'를 씁니다. 이 값도 사용자에게 확인하지 않고 바로 정합니다.
 - schedule/event의 content.date는 언급이 없으면 오늘 날짜(${today})로 자동 채웁니다. 날짜를 확인하는
   질문을 하지 않습니다.
 - 판단하거나 평가하는 내용을 덧붙이지 않고, 사용자가 말한 사실만 담백하게 기록합니다.`
@@ -42,6 +47,7 @@ const RESPONSE_SCHEMA = {
             properties: {
               item: { type: 'STRING' },
               amount: { type: 'NUMBER' },
+              category: { type: 'STRING', enum: [...CONSUMPTION_CATEGORIES] },
               place: { type: 'STRING' },
               time: { type: 'STRING' },
               date: { type: 'STRING' },

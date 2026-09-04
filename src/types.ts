@@ -26,9 +26,13 @@ export interface OnboardingTurnResponse {
 
 export type RawLogType = 'consumption' | 'schedule' | 'event'
 
+export const CONSUMPTION_CATEGORIES = ['식비', '카페/간식', '교통', '쇼핑', '문화/여가', '생활', '기타'] as const
+export type ConsumptionCategory = (typeof CONSUMPTION_CATEGORIES)[number]
+
 export interface RawLogContent {
   item?: string
   amount?: number
+  category?: ConsumptionCategory
   place?: string
   time?: string
   date?: string
