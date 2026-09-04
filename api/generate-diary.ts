@@ -1,3 +1,4 @@
+import { capLength } from '../src/lib/textSanitize'
 import type { DiaryFormat, RawLogContent, RawLogType } from '../src/types'
 
 const GEMINI_MODEL = 'gemini-3.5-flash-lite'
@@ -143,7 +144,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       return
     }
 
-    res.status(200).json({ body: text.trim() })
+    // 자연스러운 문장 안의 반복("완전 좋았어~~~", "ㅋㅋㅋ")까지 잘라내면 오히려 부자연스러워지니
+    // 반복 감지는 하지 않고, 폭주해서 끝없이 길어지는 경우만 막는 넉넉한 길이 상한만 둔다.
+    res.status(200).json({ body: capLength(text, 1000) })
   } catch (err) {
     res.status(500).json({ error: 'Failed to reach Gemini API', detail: String(err) })
   }

@@ -1,4 +1,5 @@
-import type { ConsumptionCategory, StructureLogResponse } from '../src/types'
+import { sanitizeText } from '../src/lib/textSanitize'
+import type { ConsumptionCategory, RawLogContent, StructureLogResponse } from '../src/types'
 
 const GEMINI_MODEL = 'gemini-3.5-flash-lite'
 
@@ -49,6 +50,22 @@ const ANNIVERSARY_KEYWORDS = ['생일', '생신', '기념일', '결혼기념일'
 
 function isAnniversary(text: string): boolean {
   return ANNIVERSARY_KEYWORDS.some((keyword) => text.includes(keyword))
+}
+
+// 라이트 모델이 드물게 같은 글자를 반복하며 망가지는 문제(온보딩 대화에서 관찰됨)가
+// 추출된 필드에서도 똑같이 나타날 수 있다. transcript(사용자가 실제로 한 말)는
+// 그대로 두고, 모델이 "추출·요약"한 값들만 정리한다.
+function sanitizeContent(content: RawLogContent): RawLogContent {
+  const clean = (value?: string) => (value ? sanitizeText(value, 200) : value)
+  return {
+    ...content,
+    item: clean(content.item),
+    place: clean(content.place),
+    time: clean(content.time),
+    title: clean(content.title),
+    description: clean(content.description),
+    emotion: clean(content.emotion),
+  }
 }
 
 function buildSystemPrompt(today: string) {
@@ -204,6 +221,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const parsed: StructureLogResponse = JSON.parse(responseText)
     for (const entry of parsed.entries ?? []) {
       if (!entry) continue
+      if (entry.content) entry.content = sanitizeContent(entry.content)
+      if (entry.completionSubject) entry.completionSubject = sanitizeText(entry.completionSubject, 100)
       // 라이트 모델이 "시각·장소 없는 약속"이라는 개념을 안정적으로 못 따라가서
       // 생일/기념일 언급을 event로 분류하는 경우가 많다(관찰됨). 분류 결과와 상관없이
       // 키워드가 있으면 무조건 schedule + recurring으로 강제한다.
