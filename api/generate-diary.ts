@@ -26,14 +26,15 @@ interface ApiResponse {
   json: (body: unknown) => void
 }
 
-function describeEntry(entry: DiaryEntryInput) {
+function describeEntry(entry: DiaryEntryInput, today: string) {
   const c = entry.content ?? {}
   if (entry.type === 'consumption') {
     const amount = c.amount != null ? `${c.amount.toLocaleString()}원` : ''
     return `[소비] ${c.item ?? '어떤 소비'}${amount ? ` ${amount}` : ''}${c.place ? ` (${c.place})` : ''}`
   }
   if (entry.type === 'schedule') {
-    return `[일정] ${c.title ?? '일정'}${c.time ? ` ${c.time}` : ''}${c.place ? ` @${c.place}` : ''}`
+    const timing = !c.date || c.date === today ? '오늘' : c.date > today ? '예정(아직 안 지남)' : '지난 일정'
+    return `[일정 · ${timing}] ${c.title ?? '일정'}${c.date ? ` ${c.date}` : ''}${c.time ? ` ${c.time}` : ''}${c.place ? ` @${c.place}` : ''}`
   }
   return `[사건] ${c.description ?? '있었던 일'}${c.emotion ? ` (감정: ${c.emotion})` : ''}`
 }
@@ -46,7 +47,8 @@ function buildPrompt(
   previousBody?: string,
   feedback?: string,
 ) {
-  const lines = entries.length > 0 ? entries.map(describeEntry).join('\n') : '(오늘 남긴 기록 없음)'
+  const lines =
+    entries.length > 0 ? entries.map((entry) => describeEntry(entry, date)).join('\n') : '(오늘 남긴 기록 없음)'
 
   let prompt = `당신은 사용자의 다이어리 캐릭터 "${personaName}"입니다. 말투와 성격: ${personaTone}.
 아래는 사용자가 오늘(${date}) 남긴 기록입니다. 이 사실만 바탕으로, 위 캐릭터의 말투를 살려서
@@ -57,6 +59,9 @@ ${lines}
 
 반드시 지킬 규칙:
 - 기록에 없는 사실을 새로 지어내지 않습니다.
+- 일정 항목의 대괄호 안에 '예정(아직 안 지남)'이라고 표시된 경우, 아직 일어나지 않은 일입니다.
+  이미 겪은 일처럼 쓰지 말고 "~하기로 했어", "~할 예정이야"처럼 앞으로의 계획으로 씁니다.
+  '오늘'이나 '지난 일정'으로 표시된 항목만 이미 겪은 일처럼 씁니다.
 - 재촉하거나 훈계하거나 완벽주의를 유도하는 표현을 쓰지 않습니다. 판단하거나 평가하지 않습니다.
 - 200~400자 정도의 자연스러운 문단 하나로 씁니다. 목록이나 번호를 매기지 않습니다.
 - 다이어리 본문 텍스트만 출력합니다. 다른 설명이나 따옴표를 덧붙이지 않습니다.`
