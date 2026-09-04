@@ -48,7 +48,7 @@ function ddayLabel(dateStr: string | undefined, today: string) {
 }
 
 function isCompleted(log: RawLogWithStatus) {
-  return log.task_status?.[0]?.completed ?? false
+  return log.task_status?.completed ?? false
 }
 
 function ScheduleRow({
