@@ -1,6 +1,7 @@
 export type AdhdScreeningResult = 'suspected' | 'not_suspected'
 export type DiaryFormat = 'paragraph' | 'list'
 export type InsightPeriod = 'week' | 'month'
+export type QuickEntryMode = 'text' | 'voice'
 
 export interface Persona {
   user_id: string
@@ -14,6 +15,7 @@ export interface Persona {
   insight_enabled: boolean
   insight_period: InsightPeriod
   insight_emotion_focus: string | null
+  quick_entry_mode: QuickEntryMode
   created_at: string
 }
 

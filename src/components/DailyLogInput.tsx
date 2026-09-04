@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { diceSimilarity } from '../lib/textSimilarity'
 import { supabase } from '../supabaseClient'
 import type {
+  QuickEntryMode,
   QuickPhrase,
   RawLog,
   RawLogContent,
@@ -13,6 +14,9 @@ import type {
 
 interface Props {
   userId: string
+  autoQuickEntry?: boolean
+  quickEntryMode?: QuickEntryMode
+  onQuickEntryHandled?: () => void
 }
 
 interface CompletionCandidate {
@@ -57,7 +61,7 @@ function blobToBase64(blob: Blob): Promise<string> {
   })
 }
 
-export function DailyLogInput({ userId }: Props) {
+export function DailyLogInput({ userId, autoQuickEntry, quickEntryMode, onQuickEntryHandled }: Props) {
   const [input, setInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [recording, setRecording] = useState(false)
@@ -74,6 +78,7 @@ export function DailyLogInput({ userId }: Props) {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
+  const textInputRef = useRef<HTMLInputElement>(null)
 
   const loadTodayLogs = async () => {
     const { data } = await supabase
@@ -306,6 +311,18 @@ export function DailyLogInput({ userId }: Props) {
     setRecording(false)
   }
 
+  // 홈 화면 바로가기(딥링크)로 들어온 경우, 저장해둔 기본 진입 모드에 따라
+  // 바로 녹음을 시작하거나 입력창에 포커스를 줘서 캡처 마찰을 줄인다.
+  useEffect(() => {
+    if (!autoQuickEntry) return
+    if (quickEntryMode === 'voice') {
+      startRecording()
+    } else {
+      textInputRef.current?.focus()
+    }
+    onQuickEntryHandled?.()
+  }, [autoQuickEntry])
+
   const handleConfirmAmount = async () => {
     const [current, ...rest] = pendingQueue
     if (!current || !amountInput.trim()) return
@@ -436,6 +453,7 @@ export function DailyLogInput({ userId }: Props) {
         ) : (
           <form onSubmit={handleSubmitText} className="flex gap-2">
             <input
+              ref={textInputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="오늘 쓴 것, 잡힌 약속, 있었던 일을 편하게 말해주세요"
