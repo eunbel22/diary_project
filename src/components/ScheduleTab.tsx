@@ -47,6 +47,16 @@ function ddayLabel(dateStr: string | undefined, today: string) {
   return diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`
 }
 
+// 생일/기념일처럼 매년 반복되는 일정은 raw_log에 처음 말한 연도의 날짜가 그대로 남아있으므로,
+// 그 날짜가 지났으면 올해가 아니라 다음 번 돌아오는 날짜를 기준으로 다가오는 일정인지 판단한다.
+function nextOccurrence(dateStr: string | undefined, recurring: string | undefined, today: string) {
+  if (!dateStr || recurring !== 'yearly') return dateStr
+  const [, month, day] = dateStr.split('-')
+  const todayYear = Number(today.slice(0, 4))
+  const thisYear = `${todayYear}-${month}-${day}`
+  return thisYear >= today ? thisYear : `${todayYear + 1}-${month}-${day}`
+}
+
 function isCompleted(log: RawLogWithStatus) {
   return log.task_status?.completed ?? false
 }
@@ -65,7 +75,8 @@ function ScheduleRow({
   muted?: boolean
 }) {
   const c = log.content
-  const dday = ddayLabel(c.date, today)
+  const effectiveDate = nextOccurrence(c.date, c.recurring, today)
+  const dday = ddayLabel(effectiveDate, today)
   const done = isCompleted(log)
 
   return (
@@ -89,9 +100,14 @@ function ScheduleRow({
             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
               {TYPE_LABEL[log.type]}
             </span>
+            {c.recurring === 'yearly' && (
+              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs text-rose-600">🎂 매년 반복</span>
+            )}
             <p className={`font-medium ${done ? 'line-through' : ''}`}>{c.title ?? '항목'}</p>
           </div>
-          <p className="mt-1 text-xs text-stone-400">{[c.date, c.time, c.place].filter(Boolean).join(' · ')}</p>
+          <p className="mt-1 text-xs text-stone-400">
+            {[effectiveDate, c.time, c.place].filter(Boolean).join(' · ')}
+          </p>
           {c.raw_text && <p className="mt-1 text-xs text-stone-400">"{c.raw_text}"</p>}
         </div>
         <div className="flex items-center gap-3">
@@ -164,16 +180,21 @@ export function ScheduleTab({ userId }: Props) {
   const notCompleted = logs.filter((l) => !isCompleted(l))
   const completed = logs.filter(isCompleted)
 
-  const datesWithItems = new Set(notCompleted.map((l) => l.content.date).filter(Boolean) as string[])
+  const datesWithItems = new Set(
+    notCompleted
+      .map((l) => nextOccurrence(l.content.date, l.content.recurring, today))
+      .filter(Boolean) as string[],
+  )
   const weeks = getMonthWeeks(viewDate.getFullYear(), viewDate.getMonth())
 
-  const visible = selectedDate ? notCompleted.filter((l) => l.content.date === selectedDate) : notCompleted
+  const dateOf = (l: RawLogWithStatus) => nextOccurrence(l.content.date, l.content.recurring, today) ?? ''
+  const visible = selectedDate ? notCompleted.filter((l) => dateOf(l) === selectedDate) : notCompleted
   const upcoming = visible
-    .filter((l) => (l.content.date ?? '') >= today)
-    .sort((a, b) => (a.content.date ?? '').localeCompare(b.content.date ?? ''))
+    .filter((l) => dateOf(l) >= today)
+    .sort((a, b) => dateOf(a).localeCompare(dateOf(b)))
   const past = visible
-    .filter((l) => (l.content.date ?? '') < today)
-    .sort((a, b) => (b.content.date ?? '').localeCompare(a.content.date ?? ''))
+    .filter((l) => dateOf(l) < today)
+    .sort((a, b) => dateOf(b).localeCompare(dateOf(a)))
 
   return (
     <div className="mx-auto w-full max-w-lg px-4 py-4">

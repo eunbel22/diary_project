@@ -40,6 +40,7 @@ export interface RawLogContent {
   description?: string
   emotion?: string
   raw_text?: string
+  recurring?: 'yearly'
 }
 
 export interface RawLog {

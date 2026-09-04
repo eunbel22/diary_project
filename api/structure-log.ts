@@ -43,6 +43,14 @@ function inferCategory(text: string): ConsumptionCategory {
   return '기타'
 }
 
+// 생일/기념일처럼 매년 돌아오는 날짜는 "약속"과 성격이 달라 별도 표시가 필요하다.
+// 모델에 판단을 맡기지 않고(카테고리와 같은 이유) 키워드로 감지한다.
+const ANNIVERSARY_KEYWORDS = ['생일', '생신', '기념일', '결혼기념일', '기일', '제사']
+
+function isAnniversary(text: string): boolean {
+  return ANNIVERSARY_KEYWORDS.some((keyword) => text.includes(keyword))
+}
+
 function buildSystemPrompt(today: string) {
   return `당신은 다이어리 앱의 자동 구조화 도우미입니다. 사용자가 텍스트로 적거나 음성으로 말한 내용에서
 소비(consumption) / 일정(schedule) / 할일(task) / 사건(event) 항목을 추출해 entries 배열에 담습니다.
@@ -196,6 +204,10 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       if (!entry) continue
       if (entry.type === 'consumption' && entry.content) {
         entry.content.category = inferCategory(`${entry.content.item ?? ''} ${parsed.transcript ?? ''}`)
+      }
+      if (entry.type === 'schedule' && entry.content) {
+        const text = `${entry.content.title ?? ''} ${parsed.transcript ?? ''}`
+        if (isAnniversary(text)) entry.content.recurring = 'yearly'
       }
     }
 
