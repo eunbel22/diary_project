@@ -1,3 +1,4 @@
+import { sanitizeText } from '../src/lib/textSanitize'
 import type { ChatMessage, OnboardingTurnResponse, PersonaDraft } from '../src/types'
 
 const GEMINI_MODEL = 'gemini-3.5-flash-lite'
@@ -49,26 +50,13 @@ const RESPONSE_SCHEMA = {
   required: ['assistantMessage', 'isComplete'],
 }
 
-// 모델이 드물게 같은 글자를 반복하며 망가지는 경우, 글자 수 제한 안에서도 반복이
-// 시작될 수 있다. 길이를 자르기 전에 먼저 "같은 글자 3번 이상 연속"이 나오는
-// 지점에서 잘라내 반복 자체를 제거한다.
-function stripRepetition(value: string): string {
-  const match = value.match(/(.)\1{2,}/)
-  return match?.index != null ? value.slice(0, match.index).trimEnd() : value
-}
-
-function truncate(value: string, max: number) {
-  const trimmed = stripRepetition(value.trim())
-  return trimmed.length > max ? trimmed.slice(0, max) : trimmed
-}
-
 // 모델이 드물게 반복 루프에 빠져 글자 수 지침을 무시할 수 있으므로,
-// 화면이 깨지지 않도록 서버에서 한 번 더 길이를 강제한다.
+// 화면이 깨지지 않도록 서버에서 한 번 더 길이·반복을 강제한다.
 function sanitizePersona(persona: PersonaDraft): PersonaDraft {
   return {
-    name: truncate(persona.name ?? '', 12),
-    tone: truncate(persona.tone ?? '', 60),
-    interests: (persona.interests ?? []).slice(0, 5).map((interest) => truncate(interest, 20)),
+    name: sanitizeText(persona.name ?? '', 12),
+    tone: sanitizeText(persona.tone ?? '', 60),
+    interests: (persona.interests ?? []).slice(0, 5).map((interest) => sanitizeText(interest, 20)),
   }
 }
 
