@@ -2,14 +2,8 @@ import type { ChatMessage, OnboardingTurnResponse, PersonaDraft } from '../src/t
 
 const GEMINI_MODEL = 'gemini-3.5-flash-lite'
 
-const SYSTEM_PROMPT = `당신은 다이어리 앱의 캐릭터를 만들기 위해 사용자와 대화하는 온보딩 도우미입니다.
-목표: 몇 번의 짧은 대화로 사용자의 성격, 말투 취향, 관심사를 파악해 캐릭터(페르소나)의 이름·말투·관심사를 정합니다.
-
-반드시 지킬 규칙:
-- 재촉하거나 훈계하거나 완벽주의를 유도하는 표현을 절대 쓰지 않습니다.
+const COMMON_RULES = `- 재촉하거나 훈계하거나 완벽주의를 유도하는 표현을 절대 쓰지 않습니다.
 - 판단하거나 평가하는 말투를 쓰지 않습니다. 항상 다정하고 편안한 톤을 유지합니다.
-- 꼭 필요한 것만 묻고, 사용자가 짧게 대답해도 그 안에서 자연스럽게 추정해 이어갑니다.
-- 대화는 4~6번 정도의 주고받음 안에 마무리합니다. 정보가 충분하면 굳이 더 캐묻지 않습니다.
 - 사용자가 캐릭터 이름을 정하지 않았다면, 대화 내용을 바탕으로 부드러운 이름을 제안합니다.
 - 마지막 턴에는 isComplete를 true로 하고 persona 필드(name, tone, interests)를 반드시 채웁니다.
 - isComplete가 false인 동안에는 persona 필드를 생략합니다.
@@ -18,6 +12,25 @@ const SYSTEM_PROMPT = `당신은 다이어리 앱의 캐릭터를 만들기 위�
 - persona.tone은 한 문장, 40자 이내로 간결하게 적습니다.
 - persona.interests는 최대 3개, 각 항목은 10자 이내의 짧은 단어로 적습니다.
 - 위 글자 수 제한을 넘기거나 같은 문자를 반복하는 등 비정상적인 출력을 만들지 않습니다.`
+
+const INITIAL_SYSTEM_PROMPT = `당신은 다이어리 앱의 캐릭터를 만들기 위해 사용자와 대화하는 온보딩 도우미입니다.
+목표: 몇 번의 짧은 대화로 사용자의 성격, 말투 취향, 관심사를 파악해 캐릭터(페르소나)의 이름·말투·관심사를 정합니다.
+
+반드시 지킬 규칙:
+- 꼭 필요한 것만 묻고, 사용자가 짧게 대답해도 그 안에서 자연스럽게 추정해 이어갑니다.
+- 대화는 4~6번 정도의 주고받음 안에 마무리합니다. 정보가 충분하면 굳이 더 캐묻지 않습니다.
+${COMMON_RULES}`
+
+// 쿠폰으로 캐릭터를 다시 만드는 경우: 처음 온보딩과 달리 사용자가 이미 앱을 써봤고
+// 정성껏 모은 쿠폰을 쓰는 특별한 순간이므로, 대화를 서두르지 않고 좀 더 깊게 나눈다.
+const REBUILD_SYSTEM_PROMPT = `당신은 다이어리 앱의 캐릭터를 새로 만들기 위해 사용자와 대화하는 도우미입니다.
+사용자는 이미 캐릭터를 써봤고, 쿠폰을 모아 정성껏 다시 만들고 싶어하는 것이니 서두르지 않고
+평소보다 깊게 대화해도 됩니다. 요즘 달라진 점, 좋아하게 된 것, 원하는 말투의 결 등을 여유 있게 물어봅니다.
+
+반드시 지킬 규칙:
+- 대화는 8~12번 정도의 주고받음 정도로, 여유 있게 진행합니다. 성급하게 마무리짓지 않습니다.
+- 그렇다고 같은 질문을 반복하거나 억지로 말을 늘리지 않습니다. 자연스럽게 대화가 이어지게 합니다.
+${COMMON_RULES}`
 
 const RESPONSE_SCHEMA = {
   type: 'OBJECT',
@@ -53,7 +66,7 @@ function sanitizePersona(persona: PersonaDraft): PersonaDraft {
 
 interface ApiRequest {
   method?: string
-  body: { messages?: ChatMessage[] }
+  body: { messages?: ChatMessage[]; mode?: 'initial' | 'rebuild' }
 }
 
 interface ApiResponse {
@@ -78,6 +91,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     res.status(400).json({ error: 'messages is required' })
     return
   }
+  const systemPrompt = req.body?.mode === 'rebuild' ? REBUILD_SYSTEM_PROMPT : INITIAL_SYSTEM_PROMPT
 
   try {
     const geminiRes = await fetch(
@@ -89,7 +103,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
           'x-goog-api-key': apiKey,
         },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          systemInstruction: { parts: [{ text: systemPrompt }] },
           contents: messages.map((m) => ({ role: m.role, parts: [{ text: m.content }] })),
           generationConfig: {
             responseMimeType: 'application/json',
