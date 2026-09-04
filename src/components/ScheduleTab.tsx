@@ -38,11 +38,13 @@ function getMonthWeeks(year: number, month: number): (Date | null)[][] {
   return weeks
 }
 
+function daysUntil(dateStr: string, today: string) {
+  return Math.round((new Date(`${dateStr}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000)
+}
+
 function ddayLabel(dateStr: string | undefined, today: string) {
   if (!dateStr) return null
-  const diff = Math.round(
-    (new Date(`${dateStr}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000,
-  )
+  const diff = daysUntil(dateStr, today)
   if (diff === 0) return 'D-DAY'
   return diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`
 }
@@ -83,16 +85,20 @@ function ScheduleRow({
     <div
       className={`flex items-start gap-3 rounded-xl bg-white px-4 py-3 shadow-sm ${muted ? 'opacity-60' : ''}`}
     >
-      <button
-        type="button"
-        onClick={() => onToggle(log)}
-        aria-label={done ? '완료 취소' : '완료 표시'}
-        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs ${
-          done ? 'border-amber-500 bg-amber-500 text-white' : 'border-stone-300 text-transparent'
-        }`}
-      >
-        ✓
-      </button>
+      {c.recurring === 'yearly' ? (
+        <span className="mt-0.5 h-5 w-5 shrink-0" />
+      ) : (
+        <button
+          type="button"
+          onClick={() => onToggle(log)}
+          aria-label={done ? '완료 취소' : '완료 표시'}
+          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs ${
+            done ? 'border-amber-500 bg-amber-500 text-white' : 'border-stone-300 text-transparent'
+          }`}
+        >
+          ✓
+        </button>
+      )}
 
       <div className="flex flex-1 items-center justify-between gap-2">
         <div className="text-left text-sm text-stone-700">
@@ -180,15 +186,22 @@ export function ScheduleTab({ userId }: Props) {
   const notCompleted = logs.filter((l) => !isCompleted(l))
   const completed = logs.filter(isCompleted)
 
-  const datesWithItems = new Set(
-    notCompleted
-      .map((l) => nextOccurrence(l.content.date, l.content.recurring, today))
-      .filter(Boolean) as string[],
-  )
+  // 생일/기념일은 매년 있는 일이라 1년 내내 목록에 떠 있으면 오히려 눈에 안 띄니,
+  // 다가오는 날짜가 7일 이내로 가까워졌을 때만 보여준다.
+  const dateOf = (l: RawLogWithStatus) => nextOccurrence(l.content.date, l.content.recurring, today) ?? ''
+  const isSoonEnough = (l: RawLogWithStatus) => {
+    if (l.content.recurring !== 'yearly') return true
+    const effective = dateOf(l)
+    return effective ? daysUntil(effective, today) <= 7 : true
+  }
+  const visibleNotCompleted = notCompleted.filter(isSoonEnough)
+
+  const datesWithItems = new Set(visibleNotCompleted.map(dateOf).filter(Boolean))
   const weeks = getMonthWeeks(viewDate.getFullYear(), viewDate.getMonth())
 
-  const dateOf = (l: RawLogWithStatus) => nextOccurrence(l.content.date, l.content.recurring, today) ?? ''
-  const visible = selectedDate ? notCompleted.filter((l) => dateOf(l) === selectedDate) : notCompleted
+  const visible = selectedDate
+    ? visibleNotCompleted.filter((l) => dateOf(l) === selectedDate)
+    : visibleNotCompleted
   const upcoming = visible
     .filter((l) => dateOf(l) >= today)
     .sort((a, b) => dateOf(a).localeCompare(dateOf(b)))
