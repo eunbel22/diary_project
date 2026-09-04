@@ -1,4 +1,4 @@
-import type { RawLogContent, RawLogType } from '../src/types'
+import type { DiaryFormat, RawLogContent, RawLogType } from '../src/types'
 
 const GEMINI_MODEL = 'gemini-3.5-flash-lite'
 
@@ -14,6 +14,7 @@ interface GenerateDiaryRequest {
   entries?: DiaryEntryInput[]
   previousBody?: string
   feedback?: string
+  diaryFormat?: DiaryFormat
 }
 
 interface ApiRequest {
@@ -48,15 +49,21 @@ function buildPrompt(
   personaTone: string,
   date: string,
   entries: DiaryEntryInput[],
+  diaryFormat: DiaryFormat,
   previousBody?: string,
   feedback?: string,
 ) {
   const lines =
     entries.length > 0 ? entries.map((entry) => describeEntry(entry, date)).join('\n') : '(오늘 남긴 기록 없음)'
 
+  const formatRule =
+    diaryFormat === 'list'
+      ? '- 문단으로 풀어쓰지 말고, 오늘의 기록들을 한 줄씩 짧은 목록으로 씁니다. 각 줄은 "- "로 시작하고,\n  캐릭터의 말투를 살려 짧게 씁니다. 4~8줄 정도로 씁니다.'
+      : '- 200~400자 정도의 자연스러운 문단 하나로 씁니다. 목록이나 번호를 매기지 않습니다.'
+
   let prompt = `당신은 사용자의 다이어리 캐릭터 "${personaName}"입니다. 말투와 성격: ${personaTone}.
 아래는 사용자가 오늘(${date}) 남긴 기록입니다. 이 사실만 바탕으로, 위 캐릭터의 말투를 살려서
-다이어리 문단을 하나 써주세요.
+다이어리를 써주세요.
 
 오늘의 기록:
 ${lines}
@@ -67,7 +74,7 @@ ${lines}
   이미 겪은 일처럼 쓰지 말고 "~하기로 했어", "~할 예정이야"처럼 앞으로의 계획으로 씁니다.
   '오늘'이나 '지난 일정'으로 표시된 항목만 이미 겪은 일처럼 씁니다.
 - 재촉하거나 훈계하거나 완벽주의를 유도하는 표현을 쓰지 않습니다. 판단하거나 평가하지 않습니다.
-- 200~400자 정도의 자연스러운 문단 하나로 씁니다. 목록이나 번호를 매기지 않습니다.
+${formatRule}
 - 다이어리 본문 텍스트만 출력합니다. 다른 설명이나 따옴표를 덧붙이지 않습니다.`
 
   if (previousBody) {
@@ -92,13 +99,21 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     return
   }
 
-  const { personaName, personaTone, date, entries, previousBody, feedback } = req.body ?? {}
+  const { personaName, personaTone, date, entries, previousBody, feedback, diaryFormat } = req.body ?? {}
   if (!personaName || !personaTone || !date) {
     res.status(400).json({ error: 'personaName, personaTone and date are required' })
     return
   }
 
-  const prompt = buildPrompt(personaName, personaTone, date, entries ?? [], previousBody, feedback)
+  const prompt = buildPrompt(
+    personaName,
+    personaTone,
+    date,
+    entries ?? [],
+    diaryFormat ?? 'paragraph',
+    previousBody,
+    feedback,
+  )
 
   try {
     const geminiRes = await fetch(

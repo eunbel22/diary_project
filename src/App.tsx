@@ -50,6 +50,16 @@ function Home({
     if (data) onPersonaUpdated(data as Persona)
   }
 
+  const toggleDiaryFormat = async () => {
+    const { data } = await supabase
+      .from('persona')
+      .update({ diary_format: persona.diary_format === 'list' ? 'paragraph' : 'list' })
+      .eq('user_id', persona.user_id)
+      .select()
+      .single()
+    if (data) onPersonaUpdated(data as Persona)
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-amber-50 pb-16">
       <header className="flex flex-col items-center gap-1 px-4 py-6 text-center">
@@ -59,6 +69,9 @@ function Home({
         <div className="mt-2 flex gap-3">
           <button type="button" onClick={toggleReminder} className="text-xs text-stone-400 underline hover:text-stone-600">
             저녁 리마인더 {persona.reminder_opt_in ? '끄기' : '켜기'}
+          </button>
+          <button type="button" onClick={toggleDiaryFormat} className="text-xs text-stone-400 underline hover:text-stone-600">
+            다이어리 {persona.diary_format === 'list' ? '문단형으로' : '목록형으로'}
           </button>
           <button type="button" onClick={onSignOut} className="text-xs text-stone-400 underline hover:text-stone-600">
             로그아웃

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import type { DiaryEntry, RawLog } from '../types'
+import type { DiaryEntry, DiaryFormat, RawLog } from '../types'
 
 interface Props {
   userId: string
   personaName: string
   personaTone: string
+  diaryFormat: DiaryFormat
 }
 
 function todayISO() {
@@ -51,7 +52,7 @@ function playScratchTick(ctx: AudioContext) {
   noise.stop(now + duration)
 }
 
-export function DiarySection({ userId, personaName, personaTone }: Props) {
+export function DiarySection({ userId, personaName, personaTone, diaryFormat }: Props) {
   const [entry, setEntry] = useState<DiaryEntry | null>(null)
   const [loadingInitial, setLoadingInitial] = useState(true)
   const [generating, setGenerating] = useState(false)
@@ -173,6 +174,7 @@ export function DiarySection({ userId, personaName, personaTone }: Props) {
           entries: logs.map((log) => ({ type: log.type, content: log.content })),
           previousBody: entry?.body,
           feedback,
+          diaryFormat,
         }),
       })
       if (!res.ok) throw new Error('다이어리 생성에 실패했어요.')
