@@ -1,5 +1,6 @@
 import { ArchiveSection } from './ArchiveSection'
 import { DiarySection } from './DiarySection'
+import { EmotionSummary } from './EmotionSummary'
 import type { Persona } from '../types'
 
 interface Props {
@@ -11,6 +12,7 @@ export function DiaryTab({ persona, onPersonaUpdated }: Props) {
   return (
     <div className="flex flex-col items-center gap-4 py-4">
       <DiarySection userId={persona.user_id} personaName={persona.name} personaTone={persona.tone} />
+      <EmotionSummary userId={persona.user_id} />
       <ArchiveSection
         userId={persona.user_id}
         personaName={persona.name}
