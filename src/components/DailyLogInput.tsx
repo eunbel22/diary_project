@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { diceSimilarity } from '../lib/textSimilarity'
 import { supabase } from '../supabaseClient'
 import type {
+  QuickPhrase,
   RawLog,
   RawLogContent,
   RawLogType,
@@ -67,6 +68,9 @@ export function DailyLogInput({ userId }: Props) {
   const [overdueLogs, setOverdueLogs] = useState<RawLogWithStatus[]>([])
   const [migrating, setMigrating] = useState(false)
   const [migratePromptDismissed, setMigratePromptDismissed] = useState(false)
+  const [quickPhrases, setQuickPhrases] = useState<QuickPhrase[]>([])
+  const [editingPhrases, setEditingPhrases] = useState(false)
+  const [newPhraseText, setNewPhraseText] = useState('')
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -100,10 +104,40 @@ export function DailyLogInput({ userId }: Props) {
     setOverdueLogs(overdue)
   }
 
+  const loadQuickPhrases = async () => {
+    const { data } = await supabase
+      .from('quick_phrase')
+      .select('*')
+      .eq('user_id', userId)
+      .order('sort_order', { ascending: true })
+    setQuickPhrases((data as QuickPhrase[] | null) ?? [])
+  }
+
   useEffect(() => {
     loadTodayLogs()
     loadOverdueLogs()
+    loadQuickPhrases()
   }, [])
+
+  // 매번 같은 말을 새로 타이핑/녹음하는 부담을 줄이기 위해, 저장해둔 문구를 그대로
+  // 구조화 파이프라인에 태워 기록한다(직접 말한 것과 동일하게 처리됨).
+  const handleQuickPhraseTap = async (text: string) => {
+    if (submitting || recording) return
+    await runStructuring({ text })
+  }
+
+  const handleAddQuickPhrase = async () => {
+    const text = newPhraseText.trim()
+    if (!text) return
+    await supabase.from('quick_phrase').insert({ user_id: userId, text, sort_order: quickPhrases.length })
+    setNewPhraseText('')
+    await loadQuickPhrases()
+  }
+
+  const handleDeleteQuickPhrase = async (id: string) => {
+    await supabase.from('quick_phrase').delete().eq('id', id)
+    await loadQuickPhrases()
+  }
 
   // raw_log는 불변이라 날짜만 바꿔치기할 수 없으므로, 오늘 날짜로 새로 저장하고
   // 기존 항목은 지운다.
@@ -313,6 +347,60 @@ export function DailyLogInput({ userId }: Props) {
               괜찮아요
             </button>
           </div>
+        </div>
+      )}
+
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        {quickPhrases.map((phrase) => (
+          <div
+            key={phrase.id}
+            className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs shadow-sm"
+          >
+            <button
+              type="button"
+              onClick={() => handleQuickPhraseTap(phrase.text)}
+              disabled={submitting || recording}
+              className="text-stone-600 disabled:opacity-50"
+            >
+              {phrase.text}
+            </button>
+            {editingPhrases && (
+              <button
+                type="button"
+                onClick={() => handleDeleteQuickPhrase(phrase.id)}
+                className="text-stone-300 hover:text-stone-500"
+                aria-label="문구 삭제"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => setEditingPhrases((v) => !v)}
+          className="rounded-full px-3 py-1.5 text-xs text-stone-400 underline"
+        >
+          {editingPhrases ? '완료' : '자주 쓰는 말 편집'}
+        </button>
+      </div>
+
+      {editingPhrases && (
+        <div className="mb-3 flex gap-2">
+          <input
+            value={newPhraseText}
+            onChange={(e) => setNewPhraseText(e.target.value)}
+            placeholder="자주 쓰는 말 추가 (예: 약 먹었어)"
+            className="flex-1 rounded-full border border-stone-200 px-4 py-2 text-sm outline-none focus:border-amber-400"
+          />
+          <button
+            type="button"
+            onClick={handleAddQuickPhrase}
+            disabled={!newPhraseText.trim()}
+            className="rounded-full bg-amber-500 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          >
+            추가
+          </button>
         </div>
       )}
 

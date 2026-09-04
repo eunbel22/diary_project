@@ -1,4 +1,5 @@
 export type AdhdScreeningResult = 'suspected' | 'not_suspected'
+export type DiaryFormat = 'paragraph' | 'list'
 
 export interface Persona {
   user_id: string
@@ -8,6 +9,7 @@ export interface Persona {
   reminder_opt_in: boolean
   adhd_screening_result: AdhdScreeningResult | null
   adhd_screening_completed_at: string | null
+  diary_format: DiaryFormat
   created_at: string
 }
 
@@ -69,6 +71,29 @@ export interface TaskStatus {
 // 객체 하나(또는 null)로 내려준다.
 export interface RawLogWithStatus extends RawLog {
   task_status?: { completed: boolean } | null
+}
+
+export interface ConsumptionCategoryRow {
+  id: string
+  user_id: string
+  name: string
+  sort_order: number
+  created_at: string
+}
+
+// consumption 조회 시 consumption_override를 함께 embed해서 받아올 때 쓰는 형태.
+// raw_log_id가 consumption_override의 기본키라 PostgREST가 1:1로 인식해
+// 객체 하나(또는 null)로 내려준다(task_status와 동일한 이유).
+export interface RawLogWithCategoryOverride extends RawLog {
+  consumption_override?: { category: string } | null
+}
+
+export interface QuickPhrase {
+  id: string
+  user_id: string
+  text: string
+  sort_order: number
+  created_at: string
 }
 
 export interface StructuredEntry {
