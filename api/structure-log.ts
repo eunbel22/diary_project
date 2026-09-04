@@ -184,13 +184,15 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
     const parsed: StructureLogResponse = JSON.parse(responseText)
     for (const entry of parsed.entries ?? []) {
-      if (entry.type === 'consumption') {
+      if (!entry) continue
+      if (entry.type === 'consumption' && entry.content) {
         entry.content.category = inferCategory(`${entry.content.item ?? ''} ${parsed.transcript ?? ''}`)
       }
     }
 
     res.status(200).json(parsed)
   } catch (err) {
-    res.status(500).json({ error: 'Failed to reach Gemini API', detail: String(err) })
+    console.error('structure-log failed:', err)
+    res.status(500).json({ error: 'Failed to structure the log', detail: String(err) })
   }
 }
