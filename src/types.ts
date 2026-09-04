@@ -24,7 +24,7 @@ export interface OnboardingTurnResponse {
   persona?: PersonaDraft
 }
 
-export type RawLogType = 'consumption' | 'schedule' | 'event'
+export type RawLogType = 'consumption' | 'schedule' | 'task' | 'event'
 
 export const CONSUMPTION_CATEGORIES = ['식비', '카페/간식', '교통', '쇼핑', '문화/여가', '생활', '기타'] as const
 export type ConsumptionCategory = (typeof CONSUMPTION_CATEGORIES)[number]
@@ -51,11 +51,26 @@ export interface RawLog {
   created_at: string
 }
 
+export interface TaskStatus {
+  raw_log_id: string
+  user_id: string
+  completed: boolean
+  completed_at: string | null
+  updated_at: string
+}
+
+// schedule/task 조회 시 task_status를 함께 embed해서 받아올 때 쓰는 형태.
+export interface RawLogWithStatus extends RawLog {
+  task_status?: { completed: boolean }[]
+}
+
 export interface StructuredEntry {
   type: RawLogType
   content: RawLogContent
   isEstimated: boolean
   missingRequired: boolean
+  isCompletion?: boolean
+  completionSubject?: string
 }
 
 export interface StructureLogResponse {
