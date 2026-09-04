@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AdhdScreening } from './components/AdhdScreening'
 import { AuthScreen } from './components/AuthScreen'
 import { ConsumptionTab } from './components/ConsumptionTab'
 import { DailyLogInput } from './components/DailyLogInput'
@@ -9,7 +10,7 @@ import { ScheduleTab } from './components/ScheduleTab'
 import { TabBar } from './components/TabBar'
 import { useSession } from './hooks/useSession'
 import { supabase } from './supabaseClient'
-import type { Persona } from './types'
+import type { AdhdScreeningResult, Persona } from './types'
 
 const TABS = [
   { key: 'today', label: '오늘', icon: '💬' },
@@ -80,6 +81,8 @@ function Home({
 function App() {
   const { session, loading } = useSession()
   const [persona, setPersona] = useState<Persona | null | undefined>(undefined)
+  const [screeningDone, setScreeningDone] = useState(false)
+  const [screeningResult, setScreeningResult] = useState<AdhdScreeningResult | null>(null)
 
   useEffect(() => {
     if (!session) {
@@ -105,7 +108,19 @@ function App() {
   if (loading) return <LoadingScreen />
   if (!session) return <AuthScreen />
   if (persona === undefined) return <LoadingScreen />
-  if (!persona) return <OnboardingChat userId={session.user.id} onComplete={setPersona} />
+  if (!persona) {
+    if (!screeningDone) {
+      return (
+        <AdhdScreening
+          onComplete={(result) => {
+            setScreeningResult(result)
+            setScreeningDone(true)
+          }}
+        />
+      )
+    }
+    return <OnboardingChat userId={session.user.id} screeningResult={screeningResult} onComplete={setPersona} />
+  }
 
   return <Home persona={persona} onPersonaUpdated={setPersona} onSignOut={() => supabase.auth.signOut()} />
 }

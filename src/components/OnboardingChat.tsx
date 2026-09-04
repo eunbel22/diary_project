@@ -1,16 +1,17 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../supabaseClient'
-import type { ChatMessage, OnboardingTurnResponse, Persona, PersonaDraft } from '../types'
+import type { AdhdScreeningResult, ChatMessage, OnboardingTurnResponse, Persona, PersonaDraft } from '../types'
 
 const OPENING_MESSAGE =
   '안녕하세요! 저는 아직 이름이 없어요. 당신과 대화하면서 저의 성격과 말투를 정하고 싶어요. 정답은 없으니 편하게 얘기해주세요 — 요즘 어떤 걸 하면 기분이 좋아지나요?'
 
 interface Props {
   userId: string
+  screeningResult: AdhdScreeningResult | null
   onComplete: (persona: Persona) => void
 }
 
-export function OnboardingChat({ userId, onComplete }: Props) {
+export function OnboardingChat({ userId, screeningResult, onComplete }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'model', content: OPENING_MESSAGE },
   ])
@@ -51,7 +52,14 @@ export function OnboardingChat({ userId, onComplete }: Props) {
 
       const { data, error } = await supabase
         .from('persona')
-        .insert({ user_id: userId, name: draft.name, tone: draft.tone, image_url: imageUrl })
+        .insert({
+          user_id: userId,
+          name: draft.name,
+          tone: draft.tone,
+          image_url: imageUrl,
+          adhd_screening_result: screeningResult,
+          adhd_screening_completed_at: screeningResult ? new Date().toISOString() : null,
+        })
         .select()
         .single()
 
