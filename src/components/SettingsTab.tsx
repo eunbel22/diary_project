@@ -1,7 +1,7 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { AdhdScreening } from './AdhdScreening'
 import { supabase } from '../supabaseClient'
-import type { AdhdScreeningResult, InsightPeriod, Persona } from '../types'
+import type { AdhdScreeningResult, InsightPeriod, Persona, QuickEntryMode } from '../types'
 
 interface Props {
   persona: Persona
@@ -69,6 +69,16 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
     const { data } = await supabase
       .from('persona')
       .update({ diary_format: persona.diary_format === 'list' ? 'paragraph' : 'list' })
+      .eq('user_id', persona.user_id)
+      .select()
+      .single()
+    if (data) onPersonaUpdated(data as Persona)
+  }
+
+  const handleQuickEntryModeChange = async (e: ChangeEvent<HTMLSelectElement>) => {
+    const { data } = await supabase
+      .from('persona')
+      .update({ quick_entry_mode: e.target.value as QuickEntryMode })
       .eq('user_id', persona.user_id)
       .select()
       .single()
@@ -264,6 +274,23 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm">
+        <div>
+          <p className="text-sm font-medium text-stone-700">홈 화면 바로가기 기본 모드</p>
+          <p className="mt-0.5 text-xs text-stone-400">
+            홈 화면 아이콘의 "빠른 기록" 바로가기로 들어오면 이 모드로 바로 시작해요.
+          </p>
+        </div>
+        <select
+          value={persona.quick_entry_mode}
+          onChange={handleQuickEntryModeChange}
+          className="shrink-0 rounded-full border border-stone-200 bg-transparent px-2 py-1 text-xs text-stone-600 outline-none"
+        >
+          <option value="text">텍스트</option>
+          <option value="voice">음성</option>
+        </select>
       </div>
 
       <button

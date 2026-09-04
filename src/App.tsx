@@ -41,6 +41,17 @@ function Home({
   onSignOut: () => void
 }) {
   const [tab, setTab] = useState<TabKey>('today')
+  const [quickEntryRequested, setQuickEntryRequested] = useState(false)
+
+  // 홈 화면 바로가기(딥링크, /?quick=1)로 들어온 경우 오늘 탭으로 이동해
+  // 바로 입력 모드로 진입한다. 한 번만 처리되도록 URL의 쿼리를 바로 지운다.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('quick')) {
+      setTab('today')
+      setQuickEntryRequested(true)
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }, [])
 
   return (
     <div className="flex min-h-screen flex-col bg-amber-50 pb-16">
@@ -51,7 +62,14 @@ function Home({
       </header>
 
       <main className="flex-1">
-        {tab === 'today' && <DailyLogInput userId={persona.user_id} />}
+        {tab === 'today' && (
+          <DailyLogInput
+            userId={persona.user_id}
+            autoQuickEntry={quickEntryRequested}
+            quickEntryMode={persona.quick_entry_mode}
+            onQuickEntryHandled={() => setQuickEntryRequested(false)}
+          />
+        )}
         {tab === 'schedule' && <ScheduleTab userId={persona.user_id} />}
         {tab === 'consumption' && <ConsumptionTab userId={persona.user_id} />}
         {tab === 'diary' && <DiaryTab persona={persona} onPersonaUpdated={onPersonaUpdated} />}
