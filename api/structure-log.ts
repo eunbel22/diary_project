@@ -62,9 +62,11 @@ function buildSystemPrompt(today: string) {
 
 각 항목의 분류 기준 (겹치는 경우 이 순서로 우선 적용):
 1. 돈을 쓴 이야기(구매, 결제, 지출)면 무조건 consumption입니다.
-2. 정해진 시각·장소가 있는, 아직 안 일어난 약속이면 schedule입니다.
-3. 시각·장소 상관없이 앞으로 처리해야 하는 일이면 task입니다 (예: "책 읽어야 해", "빨래해야 함").
-4. 이미 일어난 일, 겪은 일, 감정·상태에 대한 이야기면 event입니다.
+2. 생일, 기념일처럼 매년 돌아오는 날짜를 알려주는 말이면(예: "OO는 내 생일이야", "결혼기념일이야")
+   시각·장소가 없어도 schedule입니다. content.title에 무엇의 생일/기념일인지 짧게 적습니다.
+3. 정해진 시각·장소가 있는, 아직 안 일어난 약속이면 schedule입니다.
+4. 시각·장소 상관없이 앞으로 처리해야 하는 일이면 task입니다 (예: "책 읽어야 해", "빨래해야 함").
+5. 이미 일어난 일, 겪은 일, 감정·상태에 대한 이야기면 event입니다.
 
 완료 보고 감지:
 - 사용자가 이미 끝낸 일을 보고하는 말이면("~다 했어", "~마무리했어", "~끝냈어", "~완료했어" 등)
@@ -202,12 +204,21 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const parsed: StructureLogResponse = JSON.parse(responseText)
     for (const entry of parsed.entries ?? []) {
       if (!entry) continue
+      // 라이트 모델이 "시각·장소 없는 약속"이라는 개념을 안정적으로 못 따라가서
+      // 생일/기념일 언급을 event로 분류하는 경우가 많다(관찰됨). 분류 결과와 상관없이
+      // 키워드가 있으면 무조건 schedule + recurring으로 강제한다.
+      if (entry.content) {
+        const anniversaryText = `${entry.content.title ?? ''} ${entry.content.description ?? ''} ${entry.content.item ?? ''} ${parsed.transcript ?? ''}`
+        if (isAnniversary(anniversaryText)) {
+          entry.type = 'schedule'
+          entry.content.recurring = 'yearly'
+          if (!entry.content.title) {
+            entry.content.title = entry.content.description || entry.content.item || '생일/기념일'
+          }
+        }
+      }
       if (entry.type === 'consumption' && entry.content) {
         entry.content.category = inferCategory(`${entry.content.item ?? ''} ${parsed.transcript ?? ''}`)
-      }
-      if (entry.type === 'schedule' && entry.content) {
-        const text = `${entry.content.title ?? ''} ${parsed.transcript ?? ''}`
-        if (isAnniversary(text)) entry.content.recurring = 'yearly'
       }
     }
 
