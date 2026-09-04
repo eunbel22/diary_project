@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ArchiveSection } from './ArchiveSection'
 import { DiarySection } from './DiarySection'
+import { EmotionSpendingInsight } from './EmotionSpendingInsight'
 import { EmotionSummary } from './EmotionSummary'
 import { PersonaRebuildChat } from './PersonaRebuildChat'
 import type { Persona } from '../types'
@@ -34,6 +35,13 @@ export function DiaryTab({ persona, onPersonaUpdated }: Props) {
         diaryFormat={persona.diary_format}
       />
       <EmotionSummary userId={persona.user_id} />
+      {persona.insight_enabled && (
+        <EmotionSpendingInsight
+          userId={persona.user_id}
+          period={persona.insight_period}
+          emotionFocus={persona.insight_emotion_focus}
+        />
+      )}
       <ArchiveSection userId={persona.user_id} onStartRebuild={() => setRebuilding(true)} />
     </div>
   )

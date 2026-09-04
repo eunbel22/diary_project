@@ -1,5 +1,6 @@
 export type AdhdScreeningResult = 'suspected' | 'not_suspected'
 export type DiaryFormat = 'paragraph' | 'list'
+export type InsightPeriod = 'week' | 'month'
 
 export interface Persona {
   user_id: string
@@ -10,6 +11,9 @@ export interface Persona {
   adhd_screening_result: AdhdScreeningResult | null
   adhd_screening_completed_at: string | null
   diary_format: DiaryFormat
+  insight_enabled: boolean
+  insight_period: InsightPeriod
+  insight_emotion_focus: string | null
   created_at: string
 }
 

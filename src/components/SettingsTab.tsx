@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState, type ChangeEvent } from 'react'
 import { AdhdScreening } from './AdhdScreening'
 import { supabase } from '../supabaseClient'
-import type { AdhdScreeningResult, Persona } from '../types'
+import type { AdhdScreeningResult, InsightPeriod, Persona } from '../types'
 
 interface Props {
   persona: Persona
@@ -35,6 +35,25 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
   const [retakingScreening, setRetakingScreening] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
+  const [emotionOptions, setEmotionOptions] = useState<string[]>([])
+
+  // 우선 관찰 감정 선택지는 이 사용자가 실제로 써온 감정 단어 중 자주 나온 순으로 채운다.
+  useEffect(() => {
+    supabase
+      .from('raw_log')
+      .select('content')
+      .eq('user_id', persona.user_id)
+      .then(({ data }) => {
+        const rows = (data as { content: { emotion?: string } }[] | null) ?? []
+        const counts = new Map<string, number>()
+        for (const row of rows) {
+          const emotion = row.content?.emotion?.trim()
+          if (emotion) counts.set(emotion, (counts.get(emotion) ?? 0) + 1)
+        }
+        const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([emotion]) => emotion)
+        setEmotionOptions(sorted.slice(0, 8))
+      })
+  }, [persona.user_id])
 
   const toggleReminder = async () => {
     const { data } = await supabase
@@ -50,6 +69,36 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
     const { data } = await supabase
       .from('persona')
       .update({ diary_format: persona.diary_format === 'list' ? 'paragraph' : 'list' })
+      .eq('user_id', persona.user_id)
+      .select()
+      .single()
+    if (data) onPersonaUpdated(data as Persona)
+  }
+
+  const toggleInsightEnabled = async () => {
+    const { data } = await supabase
+      .from('persona')
+      .update({ insight_enabled: !persona.insight_enabled })
+      .eq('user_id', persona.user_id)
+      .select()
+      .single()
+    if (data) onPersonaUpdated(data as Persona)
+  }
+
+  const handleInsightPeriodChange = async (e: ChangeEvent<HTMLSelectElement>) => {
+    const { data } = await supabase
+      .from('persona')
+      .update({ insight_period: e.target.value as InsightPeriod })
+      .eq('user_id', persona.user_id)
+      .select()
+      .single()
+    if (data) onPersonaUpdated(data as Persona)
+  }
+
+  const handleEmotionFocusChange = async (e: ChangeEvent<HTMLSelectElement>) => {
+    const { data } = await supabase
+      .from('persona')
+      .update({ insight_emotion_focus: e.target.value || null })
       .eq('user_id', persona.user_id)
       .select()
       .single()
@@ -101,6 +150,12 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
   if (retakingScreening) {
     return <AdhdScreening onComplete={handleScreeningComplete} />
   }
+
+  // 저장된 값이 자주 나온 감정 순위 밖이어도 선택창에서 사라지지 않게 포함시킨다.
+  const emotionSelectOptions =
+    persona.insight_emotion_focus && !emotionOptions.includes(persona.insight_emotion_focus)
+      ? [persona.insight_emotion_focus, ...emotionOptions]
+      : emotionOptions
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-3 px-4 py-4">
@@ -158,6 +213,57 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
           {exporting ? '내보내는 중...' : '내보내기'}
         </button>
         {exportError && <p className="text-xs text-red-500">{exportError}</p>}
+      </div>
+
+      <h2 className="mt-2 px-1 text-xs font-semibold tracking-wide text-stone-400 uppercase">나만의 설정</h2>
+
+      <div className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-stone-700">감정-소비 인사이트</p>
+            <p className="mt-0.5 text-xs text-stone-400">
+              판단 없이, 어떤 감정이 있던 날의 소비 패턴만 관찰해서 보여줘요.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={toggleInsightEnabled}
+            className="shrink-0 rounded-full bg-stone-100 px-3 py-1.5 text-xs font-medium text-stone-600"
+          >
+            {persona.insight_enabled ? '켜짐' : '꺼짐'}
+          </button>
+        </div>
+
+        {persona.insight_enabled && (
+          <div className="flex flex-col gap-2 border-t border-stone-100 pt-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-stone-500">관찰 주기</p>
+              <select
+                value={persona.insight_period}
+                onChange={handleInsightPeriodChange}
+                className="rounded-full border border-stone-200 bg-transparent px-2 py-1 text-xs text-stone-600 outline-none"
+              >
+                <option value="week">주간</option>
+                <option value="month">월간</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-stone-500">우선 관찰 감정</p>
+              <select
+                value={persona.insight_emotion_focus ?? ''}
+                onChange={handleEmotionFocusChange}
+                className="rounded-full border border-stone-200 bg-transparent px-2 py-1 text-xs text-stone-600 outline-none"
+              >
+                <option value="">자동(가장 많이 나온 감정)</option>
+                {emotionSelectOptions.map((emotion) => (
+                  <option key={emotion} value={emotion}>
+                    {emotion}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       <button
