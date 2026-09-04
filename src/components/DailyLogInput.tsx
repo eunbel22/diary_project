@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { diceSimilarity } from '../lib/textSimilarity'
 import { supabase } from '../supabaseClient'
 import type { RawLog, RawLogContent, RawLogType, StructuredEntry, StructureLogResponse } from '../types'
 
@@ -6,11 +7,20 @@ interface Props {
   userId: string
 }
 
+interface CompletionCandidate {
+  id: string
+  content: RawLogContent
+  task_status?: { completed: boolean }[]
+}
+
 const TYPE_LABEL: Record<RawLogType, string> = {
   consumption: '소비',
   schedule: '일정',
+  task: '할일',
   event: '사건',
 }
+
+const AUTO_COMPLETE_THRESHOLD = 0.3
 
 function todayISO() {
   const now = new Date()
@@ -23,7 +33,7 @@ function summarize(type: RawLogType, content: RawLogContent) {
     const amount = content.amount != null ? `${content.amount.toLocaleString()}원` : ''
     return [content.item ?? '소비', amount].filter(Boolean).join(' · ')
   }
-  if (type === 'schedule') {
+  if (type === 'schedule' || type === 'task') {
     return [content.title, content.date, content.time].filter(Boolean).join(' · ')
   }
   return content.description ?? ''
@@ -74,6 +84,42 @@ export function DailyLogInput({ userId }: Props) {
     if (insertError) throw insertError
   }
 
+  // "데미안 다 읽었어" 같은 완료 보고가 감지되면, 아직 완료 안 된 일정/할일 중
+  // 가장 비슷한 항목을 찾아 자동으로 완료 처리한다. 확실한 매치가 없으면 조용히 넘어간다
+  // (엉뚱한 항목을 억지로 체크하지 않는다).
+  const tryAutoComplete = async (subject: string) => {
+    try {
+      const { data } = await supabase
+        .from('raw_log')
+        .select('id, content, task_status(completed)')
+        .eq('user_id', userId)
+        .in('type', ['task', 'schedule'])
+
+      const candidates = (data as CompletionCandidate[] | null) ?? []
+      let best: { id: string; score: number } | null = null
+
+      for (const row of candidates) {
+        if (row.task_status?.[0]?.completed) continue
+        const title = row.content?.title
+        if (!title) continue
+        const score = diceSimilarity(subject, title)
+        if (score > AUTO_COMPLETE_THRESHOLD && (!best || score > best.score)) {
+          best = { id: row.id, score }
+        }
+      }
+
+      if (!best) return
+      await supabase.from('task_status').upsert({
+        raw_log_id: best.id,
+        user_id: userId,
+        completed: true,
+        completed_at: new Date().toISOString(),
+      })
+    } catch (err) {
+      console.warn('완료 자동 매칭 실패:', err)
+    }
+  }
+
   const handleDelete = async (id: string) => {
     const { error: deleteError } = await supabase.from('raw_log').delete().eq('id', id)
     if (deleteError) {
@@ -107,6 +153,9 @@ export function DailyLogInput({ userId }: Props) {
 
       for (const entry of ready) {
         await saveEntry(entry)
+        if (entry.isCompletion && entry.completionSubject) {
+          await tryAutoComplete(entry.completionSubject)
+        }
       }
       if (ready.length > 0) await loadTodayLogs()
 

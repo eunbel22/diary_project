@@ -36,6 +36,10 @@ function describeEntry(entry: DiaryEntryInput, today: string) {
     const timing = !c.date || c.date === today ? '오늘' : c.date > today ? '예정(아직 안 지남)' : '지난 일정'
     return `[일정 · ${timing}] ${c.title ?? '일정'}${c.date ? ` ${c.date}` : ''}${c.time ? ` ${c.time}` : ''}${c.place ? ` @${c.place}` : ''}`
   }
+  if (entry.type === 'task') {
+    const timing = !c.date || c.date === today ? '오늘 할 일' : c.date > today ? '예정(아직 안 지남)' : '지난 할일'
+    return `[할일 · ${timing}] ${c.title ?? '할일'}`
+  }
   return `[사건] ${c.description ?? '있었던 일'}${c.emotion ? ` (감정: ${c.emotion})` : ''}`
 }
 

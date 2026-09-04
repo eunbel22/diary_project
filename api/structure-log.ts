@@ -45,7 +45,7 @@ function inferCategory(text: string): ConsumptionCategory {
 
 function buildSystemPrompt(today: string) {
   return `당신은 다이어리 앱의 자동 구조화 도우미입니다. 사용자가 텍스트로 적거나 음성으로 말한 내용에서
-소비(consumption) / 일정(schedule) / 사건(event) 항목을 추출해 entries 배열에 담습니다.
+소비(consumption) / 일정(schedule) / 할일(task) / 사건(event) 항목을 추출해 entries 배열에 담습니다.
 
 한 번의 말에 서로 구분되는 사실이 여러 개 섞여 있을 수 있습니다(예: "커피 5천원 썼고 이따 3시에 병원
 예약 있어" → 소비 1건 + 일정 1건). 그런 경우 entries에 각각 별도 항목으로 나눠 담습니다. 하나의
@@ -54,8 +54,15 @@ function buildSystemPrompt(today: string) {
 
 각 항목의 분류 기준 (겹치는 경우 이 순서로 우선 적용):
 1. 돈을 쓴 이야기(구매, 결제, 지출)면 무조건 consumption입니다.
-2. 아직 일어나지 않은, 앞으로 예정된 약속·할 일이면 schedule입니다.
-3. 이미 일어난 일, 겪은 일, 감정·상태에 대한 이야기면 event입니다.
+2. 정해진 시각·장소가 있는, 아직 안 일어난 약속이면 schedule입니다.
+3. 시각·장소 상관없이 앞으로 처리해야 하는 일이면 task입니다 (예: "책 읽어야 해", "빨래해야 함").
+4. 이미 일어난 일, 겪은 일, 감정·상태에 대한 이야기면 event입니다.
+
+완료 보고 감지:
+- 사용자가 이미 끝낸 일을 보고하는 말이면("~다 했어", "~마무리했어", "~끝냈어", "~완료했어" 등)
+  그 항목의 isCompletion을 true로 하고, completionSubject에 무엇을 완료했는지 핵심 명사구만
+  짧게 적습니다(예: "데미안 책읽기"). 이런 경우 type은 이미 일어난 일이므로 event로 분류합니다.
+- 완료 보고가 아니면 isCompletion은 항상 false이고 completionSubject는 비웁니다.
 
 반드시 지킬 규칙:
 - 오디오가 주어지면 먼저 정확히 전사해서 transcript에 담습니다. 텍스트가 주어지면 transcript에 입력을 그대로 담습니다.
@@ -65,8 +72,8 @@ function buildSystemPrompt(today: string) {
 - item(항목), place(장소), time(시간), emotion(감정) 등 금액 외의 정보는 언급이 없으면 맥락에 맞게
   자연스럽게 추정해서 채우고, 절대 사용자에게 되묻지 않습니다. 하나라도 추정한 값이 있으면 그 항목의
   isEstimated를 true로 설정합니다.
-- schedule/event의 content.date는 언급이 없으면 오늘 날짜(${today})로 자동 채웁니다. 날짜를 확인하는
-  질문을 하지 않습니다.
+- schedule/task/event의 content.date는 언급이 없으면 오늘 날짜(${today})로 자동 채웁니다. 날짜를
+  확인하는 질문을 하지 않습니다. task의 제목은 content.title에 적습니다.
 - 판단하거나 평가하는 내용을 덧붙이지 않고, 사용자가 말한 사실만 담백하게 기록합니다.`
 }
 
@@ -79,7 +86,7 @@ const RESPONSE_SCHEMA = {
       items: {
         type: 'OBJECT',
         properties: {
-          type: { type: 'STRING', enum: ['consumption', 'schedule', 'event'] },
+          type: { type: 'STRING', enum: ['consumption', 'schedule', 'task', 'event'] },
           content: {
             type: 'OBJECT',
             properties: {
@@ -95,6 +102,8 @@ const RESPONSE_SCHEMA = {
           },
           isEstimated: { type: 'BOOLEAN' },
           missingRequired: { type: 'BOOLEAN' },
+          isCompletion: { type: 'BOOLEAN' },
+          completionSubject: { type: 'STRING' },
         },
         required: ['type', 'content', 'isEstimated', 'missingRequired'],
       },

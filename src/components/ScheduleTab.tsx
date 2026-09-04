@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import type { RawLog } from '../types'
+import type { RawLogType, RawLogWithStatus } from '../types'
 
 interface Props {
   userId: string
 }
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
+
+const TYPE_LABEL: Partial<Record<RawLogType, string>> = {
+  schedule: '일정',
+  task: '할일',
+}
 
 function todayISO() {
   const now = new Date()
@@ -42,55 +47,80 @@ function ddayLabel(dateStr: string | undefined, today: string) {
   return diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`
 }
 
+function isCompleted(log: RawLogWithStatus) {
+  return log.task_status?.[0]?.completed ?? false
+}
+
 function ScheduleRow({
   log,
   today,
   onDelete,
+  onToggle,
   muted,
 }: {
-  log: RawLog
+  log: RawLogWithStatus
   today: string
   onDelete: (id: string) => void
+  onToggle: (log: RawLogWithStatus) => void
   muted?: boolean
 }) {
   const c = log.content
   const dday = ddayLabel(c.date, today)
+  const done = isCompleted(log)
+
   return (
     <div
-      className={`flex items-center justify-between rounded-xl bg-white px-4 py-3 shadow-sm ${
-        muted ? 'opacity-60' : ''
-      }`}
+      className={`flex items-start gap-3 rounded-xl bg-white px-4 py-3 shadow-sm ${muted ? 'opacity-60' : ''}`}
     >
-      <div className="text-left text-sm text-stone-700">
-        <p className="font-medium">{c.title ?? '일정'}</p>
-        <p className="text-xs text-stone-400">{[c.date, c.time, c.place].filter(Boolean).join(' · ')}</p>
-        {c.raw_text && <p className="mt-1 text-xs text-stone-400">"{c.raw_text}"</p>}
-      </div>
-      <div className="flex items-center gap-3">
-        {dday && (
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-              dday === 'D-DAY' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700'
-            }`}
+      <button
+        type="button"
+        onClick={() => onToggle(log)}
+        aria-label={done ? '완료 취소' : '완료 표시'}
+        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs ${
+          done ? 'border-amber-500 bg-amber-500 text-white' : 'border-stone-300 text-transparent'
+        }`}
+      >
+        ✓
+      </button>
+
+      <div className="flex flex-1 items-center justify-between gap-2">
+        <div className="text-left text-sm text-stone-700">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+              {TYPE_LABEL[log.type]}
+            </span>
+            <p className={`font-medium ${done ? 'line-through' : ''}`}>{c.title ?? '항목'}</p>
+          </div>
+          <p className="mt-1 text-xs text-stone-400">{[c.date, c.time, c.place].filter(Boolean).join(' · ')}</p>
+          {c.raw_text && <p className="mt-1 text-xs text-stone-400">"{c.raw_text}"</p>}
+        </div>
+        <div className="flex items-center gap-3">
+          {dday && !done && (
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                dday === 'D-DAY' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700'
+              }`}
+            >
+              {dday}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => onDelete(log.id)}
+            className="text-xs text-stone-300 hover:text-stone-500"
           >
-            {dday}
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={() => onDelete(log.id)}
-          className="text-xs text-stone-300 hover:text-stone-500"
-        >
-          삭제
-        </button>
+            삭제
+          </button>
+        </div>
       </div>
     </div>
   )
 }
 
 export function ScheduleTab({ userId }: Props) {
-  const [logs, setLogs] = useState<RawLog[]>([])
+  const [logs, setLogs] = useState<RawLogWithStatus[]>([])
   const [loading, setLoading] = useState(true)
+  const [showCompleted, setShowCompleted] = useState(false)
   const [viewDate, setViewDate] = useState(() => {
     const now = new Date()
     return new Date(now.getFullYear(), now.getMonth(), 1)
@@ -100,11 +130,11 @@ export function ScheduleTab({ userId }: Props) {
   const load = async () => {
     const { data } = await supabase
       .from('raw_log')
-      .select('*')
+      .select('*, task_status(completed)')
       .eq('user_id', userId)
-      .eq('type', 'schedule')
+      .in('type', ['schedule', 'task'])
       .order('created_at', { ascending: false })
-    setLogs((data as RawLog[] | null) ?? [])
+    setLogs((data as RawLogWithStatus[] | null) ?? [])
     setLoading(false)
   }
 
@@ -117,13 +147,27 @@ export function ScheduleTab({ userId }: Props) {
     await load()
   }
 
+  const handleToggle = async (log: RawLogWithStatus) => {
+    const done = isCompleted(log)
+    await supabase.from('task_status').upsert({
+      raw_log_id: log.id,
+      user_id: userId,
+      completed: !done,
+      completed_at: done ? null : new Date().toISOString(),
+    })
+    await load()
+  }
+
   if (loading) return null
 
   const today = todayISO()
-  const datesWithSchedule = new Set(logs.map((l) => l.content.date).filter(Boolean) as string[])
+  const notCompleted = logs.filter((l) => !isCompleted(l))
+  const completed = logs.filter(isCompleted)
+
+  const datesWithItems = new Set(notCompleted.map((l) => l.content.date).filter(Boolean) as string[])
   const weeks = getMonthWeeks(viewDate.getFullYear(), viewDate.getMonth())
 
-  const visible = selectedDate ? logs.filter((l) => l.content.date === selectedDate) : logs
+  const visible = selectedDate ? notCompleted.filter((l) => l.content.date === selectedDate) : notCompleted
   const upcoming = visible
     .filter((l) => (l.content.date ?? '') >= today)
     .sort((a, b) => (a.content.date ?? '').localeCompare(b.content.date ?? ''))
@@ -167,16 +211,16 @@ export function ScheduleTab({ userId }: Props) {
             {week.map((date, dayIndex) => {
               if (!date) return <span key={dayIndex} />
               const iso = dateToISO(date)
-              const hasSchedule = datesWithSchedule.has(iso)
+              const hasItem = datesWithItems.has(iso)
               const isSelected = selectedDate === iso
 
               return (
                 <button
                   key={dayIndex}
                   type="button"
-                  onClick={() => hasSchedule && setSelectedDate(isSelected ? null : iso)}
+                  onClick={() => hasItem && setSelectedDate(isSelected ? null : iso)}
                   className={`rounded-full py-1 text-xs ${
-                    hasSchedule ? 'bg-amber-200 font-medium text-amber-800' : 'text-stone-300'
+                    hasItem ? 'bg-amber-200 font-medium text-amber-800' : 'text-stone-300'
                   } ${isSelected ? 'ring-2 ring-amber-500' : ''}`}
                 >
                   {date.getDate()}
@@ -192,35 +236,68 @@ export function ScheduleTab({ userId }: Props) {
             onClick={() => setSelectedDate(null)}
             className="mt-2 text-xs text-stone-400 underline hover:text-stone-600"
           >
-            전체 일정 다시 보기
+            전체 다시 보기
           </button>
         )}
       </div>
 
       <h2 className="mt-4 mb-2 text-sm font-semibold text-stone-700">
-        {selectedDate ? `${selectedDate} 일정` : '다가오는 일정'}
+        {selectedDate ? `${selectedDate} 일정·할일` : '다가오는 일정·할일'}
       </h2>
       {upcoming.length === 0 ? (
         <p className="text-sm text-stone-400">
-          {selectedDate ? '이 날짜엔 예정된 일정이 없어요.' : '예정된 일정이 없어요.'}
+          {selectedDate ? '이 날짜엔 남은 항목이 없어요.' : '예정된 일정이나 할일이 없어요.'}
         </p>
       ) : (
         <div className="flex flex-col gap-2">
           {upcoming.map((log) => (
-            <ScheduleRow key={log.id} log={log} today={today} onDelete={handleDelete} />
+            <ScheduleRow key={log.id} log={log} today={today} onDelete={handleDelete} onToggle={handleToggle} />
           ))}
         </div>
       )}
 
       {past.length > 0 && (
         <>
-          <h2 className="mt-6 mb-2 text-sm font-semibold text-stone-700">지난 일정</h2>
+          <h2 className="mt-6 mb-2 text-sm font-semibold text-stone-700">지난 일정·할일</h2>
           <div className="flex flex-col gap-2">
             {past.map((log) => (
-              <ScheduleRow key={log.id} log={log} today={today} onDelete={handleDelete} muted />
+              <ScheduleRow
+                key={log.id}
+                log={log}
+                today={today}
+                onDelete={handleDelete}
+                onToggle={handleToggle}
+                muted
+              />
             ))}
           </div>
         </>
+      )}
+
+      {completed.length > 0 && (
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={() => setShowCompleted((v) => !v)}
+            className="text-xs text-stone-400 underline hover:text-stone-600"
+          >
+            완료한 것 {completed.length}개 {showCompleted ? '접기' : '보기'}
+          </button>
+          {showCompleted && (
+            <div className="mt-2 flex flex-col gap-2">
+              {completed.map((log) => (
+                <ScheduleRow
+                  key={log.id}
+                  log={log}
+                  today={today}
+                  onDelete={handleDelete}
+                  onToggle={handleToggle}
+                  muted
+                />
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   )
