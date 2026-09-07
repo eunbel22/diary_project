@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import type { RawLogType, RawLogWithStatus } from '../types'
+import type { RawLogType, RawLogWithStatus, TaskBreakdownDetail } from '../types'
 
 interface Props {
   userId: string
+  personaName: string
+  personaTone: string
+  taskBreakdownEnabled: boolean
+  taskBreakdownDetail: TaskBreakdownDetail
 }
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
@@ -69,77 +73,113 @@ function ScheduleRow({
   onDelete,
   onToggle,
   muted,
+  taskBreakdownEnabled,
+  breakdownGenerating,
+  onRequestBreakdown,
+  onToggleStep,
 }: {
   log: RawLogWithStatus
   today: string
   onDelete: (id: string) => void
   onToggle: (log: RawLogWithStatus) => void
   muted?: boolean
+  taskBreakdownEnabled: boolean
+  breakdownGenerating: boolean
+  onRequestBreakdown: (log: RawLogWithStatus) => void
+  onToggleStep: (log: RawLogWithStatus, stepIndex: number) => void
 }) {
   const c = log.content
   const effectiveDate = nextOccurrence(c.date, c.recurring, today)
   const dday = ddayLabel(effectiveDate, today)
   const done = isCompleted(log)
+  const steps = log.task_breakdown?.steps ?? []
 
   return (
-    <div
-      className={`flex items-start gap-3 rounded-xl bg-white px-4 py-3 shadow-sm ${muted ? 'opacity-60' : ''}`}
-    >
-      {c.recurring === 'yearly' ? (
-        <span className="mt-0.5 h-5 w-5 shrink-0" />
-      ) : (
-        <button
-          type="button"
-          onClick={() => onToggle(log)}
-          aria-label={done ? '완료 취소' : '완료 표시'}
-          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs ${
-            done ? 'border-amber-500 bg-amber-500 text-white' : 'border-stone-300 text-transparent'
-          }`}
-        >
-          ✓
-        </button>
-      )}
-
-      <div className="flex flex-1 items-center justify-between gap-2">
-        <div className="text-left text-sm text-stone-700">
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
-              {TYPE_LABEL[log.type]}
-            </span>
-            {c.recurring === 'yearly' && (
-              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs text-rose-600">🎂 매년 반복</span>
-            )}
-            <p className={`font-medium ${done ? 'line-through' : ''}`}>{c.title ?? '항목'}</p>
-          </div>
-          <p className="mt-1 text-xs text-stone-400">
-            {[effectiveDate, c.time, c.place].filter(Boolean).join(' · ')}
-          </p>
-          {c.raw_text && <p className="mt-1 text-xs text-stone-400">"{c.raw_text}"</p>}
-        </div>
-        <div className="flex items-center gap-3">
-          {dday && !done && (
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                dday === 'D-DAY' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700'
-              }`}
-            >
-              {dday}
-            </span>
-          )}
+    <div className={`flex flex-col gap-2 rounded-xl bg-white px-4 py-3 shadow-sm ${muted ? 'opacity-60' : ''}`}>
+      <div className="flex items-start gap-3">
+        {c.recurring === 'yearly' ? (
+          <span className="mt-0.5 h-5 w-5 shrink-0" />
+        ) : (
           <button
             type="button"
-            onClick={() => onDelete(log.id)}
-            className="text-xs text-stone-300 hover:text-stone-500"
+            onClick={() => onToggle(log)}
+            aria-label={done ? '완료 취소' : '완료 표시'}
+            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs ${
+              done ? 'border-amber-500 bg-amber-500 text-white' : 'border-stone-300 text-transparent'
+            }`}
           >
-            삭제
+            ✓
           </button>
+        )}
+
+        <div className="flex flex-1 items-center justify-between gap-2">
+          <div className="text-left text-sm text-stone-700">
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+                {TYPE_LABEL[log.type]}
+              </span>
+              {c.recurring === 'yearly' && (
+                <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs text-rose-600">🎂 매년 반복</span>
+              )}
+              <p className={`font-medium ${done ? 'line-through' : ''}`}>{c.title ?? '항목'}</p>
+            </div>
+            <p className="mt-1 text-xs text-stone-400">
+              {[effectiveDate, c.time, c.place].filter(Boolean).join(' · ')}
+            </p>
+            {c.raw_text && <p className="mt-1 text-xs text-stone-400">"{c.raw_text}"</p>}
+          </div>
+          <div className="flex items-center gap-3">
+            {dday && !done && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                  dday === 'D-DAY' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700'
+                }`}
+              >
+                {dday}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => onDelete(log.id)}
+              className="text-xs text-stone-300 hover:text-stone-500"
+            >
+              삭제
+            </button>
+          </div>
         </div>
       </div>
+
+      {taskBreakdownEnabled && log.type === 'task' && !done && (
+        <div className="ml-8 flex flex-col gap-1.5">
+          {steps.length > 0 ? (
+            steps.map((step, index) => (
+              <label key={index} className="flex items-center gap-2 text-xs text-stone-600">
+                <input
+                  type="checkbox"
+                  checked={step.completed}
+                  onChange={() => onToggleStep(log, index)}
+                  className="h-3.5 w-3.5 rounded border-stone-300 text-amber-500 focus:ring-amber-400"
+                />
+                <span className={step.completed ? 'line-through opacity-60' : ''}>{step.text}</span>
+              </label>
+            ))
+          ) : (
+            <button
+              type="button"
+              onClick={() => onRequestBreakdown(log)}
+              disabled={breakdownGenerating}
+              className="self-start text-xs text-amber-600 underline disabled:opacity-50"
+            >
+              {breakdownGenerating ? '나누는 중...' : '쪼개줘'}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
 
-export function ScheduleTab({ userId }: Props) {
+export function ScheduleTab({ userId, personaName, personaTone, taskBreakdownEnabled, taskBreakdownDetail }: Props) {
   const [logs, setLogs] = useState<RawLogWithStatus[]>([])
   const [loading, setLoading] = useState(true)
   const [showCompleted, setShowCompleted] = useState(false)
@@ -148,11 +188,12 @@ export function ScheduleTab({ userId }: Props) {
     return new Date(now.getFullYear(), now.getMonth(), 1)
   })
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [breakdownGeneratingId, setBreakdownGeneratingId] = useState<string | null>(null)
 
   const load = async () => {
     const { data } = await supabase
       .from('raw_log')
-      .select('*, task_status(completed)')
+      .select('*, task_status(completed), task_breakdown(steps)')
       .eq('user_id', userId)
       .in('type', ['schedule', 'task'])
       .order('created_at', { ascending: false })
@@ -177,6 +218,46 @@ export function ScheduleTab({ userId }: Props) {
       completed: !done,
       completed_at: done ? null : new Date().toISOString(),
     })
+    await load()
+  }
+
+  const handleRequestBreakdown = async (log: RawLogWithStatus) => {
+    if (!log.content.title) return
+    setBreakdownGeneratingId(log.id)
+    try {
+      const res = await fetch('/api/generate-task-breakdown', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          personaName,
+          personaTone,
+          title: log.content.title,
+          detail: taskBreakdownDetail,
+        }),
+      })
+      if (!res.ok) throw new Error('generate-task-breakdown failed')
+      const { steps }: { steps: string[] } = await res.json()
+      if (steps.length === 0) return
+
+      await supabase.from('task_breakdown').upsert({
+        raw_log_id: log.id,
+        user_id: userId,
+        steps: steps.map((text) => ({ text, completed: false })),
+      })
+      await load()
+    } catch (err) {
+      console.error('할일 나누기 실패:', err)
+    } finally {
+      setBreakdownGeneratingId(null)
+    }
+  }
+
+  const handleToggleStep = async (log: RawLogWithStatus, stepIndex: number) => {
+    const steps = log.task_breakdown?.steps ?? []
+    const nextSteps = steps.map((step, index) =>
+      index === stepIndex ? { ...step, completed: !step.completed } : step,
+    )
+    await supabase.from('task_breakdown').update({ steps: nextSteps }).eq('raw_log_id', log.id)
     await load()
   }
 
@@ -285,7 +366,17 @@ export function ScheduleTab({ userId }: Props) {
       ) : (
         <div className="flex flex-col gap-2">
           {upcoming.map((log) => (
-            <ScheduleRow key={log.id} log={log} today={today} onDelete={handleDelete} onToggle={handleToggle} />
+            <ScheduleRow
+              key={log.id}
+              log={log}
+              today={today}
+              onDelete={handleDelete}
+              onToggle={handleToggle}
+              taskBreakdownEnabled={taskBreakdownEnabled}
+              breakdownGenerating={breakdownGeneratingId === log.id}
+              onRequestBreakdown={handleRequestBreakdown}
+              onToggleStep={handleToggleStep}
+            />
           ))}
         </div>
       )}
@@ -301,6 +392,10 @@ export function ScheduleTab({ userId }: Props) {
                 today={today}
                 onDelete={handleDelete}
                 onToggle={handleToggle}
+                taskBreakdownEnabled={taskBreakdownEnabled}
+                breakdownGenerating={breakdownGeneratingId === log.id}
+                onRequestBreakdown={handleRequestBreakdown}
+                onToggleStep={handleToggleStep}
                 muted
               />
             ))}
@@ -326,6 +421,10 @@ export function ScheduleTab({ userId }: Props) {
                   today={today}
                   onDelete={handleDelete}
                   onToggle={handleToggle}
+                  taskBreakdownEnabled={taskBreakdownEnabled}
+                  breakdownGenerating={breakdownGeneratingId === log.id}
+                  onRequestBreakdown={handleRequestBreakdown}
+                  onToggleStep={handleToggleStep}
                   muted
                 />
               ))}
