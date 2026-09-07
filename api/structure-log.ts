@@ -91,6 +91,14 @@ function buildSystemPrompt(today: string) {
   짧게 적습니다(예: "데미안 책읽기"). 이런 경우 type은 이미 일어난 일이므로 event로 분류합니다.
 - 완료 보고가 아니면 isCompletion은 항상 false이고 completionSubject는 비웁니다.
 
+구매 욕구 감지:
+- 아직 사지 않았지만 "사고 싶어", "지르고 싶다", "살까 말까 고민돼" 처럼 구매 욕구만
+  표현하는 말이면 그 항목의 isPurchaseIntent를 true로 하고, content.item에 무엇을 사고
+  싶은지, 가격이 언급됐다면 content.amount에 그 금액을 담습니다(언급 없으면 비워둡니다).
+  이런 경우 아직 돈을 쓴 게 아니므로 type은 event입니다.
+- 이미 실제로 산 이야기(과거형, "샀어")는 구매 욕구가 아니라 일반 소비(consumption)입니다.
+- 구매 욕구가 아니면 isPurchaseIntent는 항상 false입니다.
+
 반드시 지킬 규칙:
 - 오디오가 주어지면 먼저 정확히 전사해서 transcript에 담습니다. 텍스트가 주어지면 transcript에 입력을 그대로 담습니다.
 - consumption 항목의 content.amount(금액)는 유일한 필수 정보입니다. 금액이 명확히 언급되지 않았다면
@@ -131,6 +139,7 @@ const RESPONSE_SCHEMA = {
           missingRequired: { type: 'BOOLEAN' },
           isCompletion: { type: 'BOOLEAN' },
           completionSubject: { type: 'STRING' },
+          isPurchaseIntent: { type: 'BOOLEAN' },
         },
         required: ['type', 'content', 'isEstimated', 'missingRequired'],
       },

@@ -2,6 +2,7 @@ export type AdhdScreeningResult = 'suspected' | 'not_suspected'
 export type DiaryFormat = 'paragraph' | 'list'
 export type InsightPeriod = 'week' | 'month'
 export type QuickEntryMode = 'text' | 'voice'
+export type PurchasePauseWaitHours = 12 | 24 | 72
 
 export interface Persona {
   user_id: string
@@ -16,6 +17,9 @@ export interface Persona {
   insight_period: InsightPeriod
   insight_emotion_focus: string | null
   quick_entry_mode: QuickEntryMode
+  purchase_pause_enabled: boolean
+  purchase_pause_wait_hours: PurchasePauseWaitHours
+  purchase_pause_min_amount: number
   created_at: string
 }
 
@@ -117,6 +121,17 @@ export interface StructuredEntry {
   missingRequired: boolean
   isCompletion?: boolean
   completionSubject?: string
+  isPurchaseIntent?: boolean
+}
+
+export interface PurchasePause {
+  id: string
+  user_id: string
+  item: string
+  amount: number | null
+  created_at: string
+  remind_at: string
+  resolved: boolean
 }
 
 export interface StructureLogResponse {

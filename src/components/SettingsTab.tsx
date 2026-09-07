@@ -1,8 +1,8 @@
-import { useEffect, useState, type ChangeEvent } from 'react'
+import { useEffect, useState, type ChangeEvent, type FocusEvent } from 'react'
 import { AdhdScreening } from './AdhdScreening'
 import { AppFeedbackForm } from './AppFeedbackForm'
 import { supabase } from '../supabaseClient'
-import type { AdhdScreeningResult, InsightPeriod, Persona, QuickEntryMode } from '../types'
+import type { AdhdScreeningResult, InsightPeriod, Persona, PurchasePauseWaitHours, QuickEntryMode } from '../types'
 
 interface Props {
   persona: Persona
@@ -111,6 +111,38 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
     const { data } = await supabase
       .from('persona')
       .update({ insight_emotion_focus: e.target.value || null })
+      .eq('user_id', persona.user_id)
+      .select()
+      .single()
+    if (data) onPersonaUpdated(data as Persona)
+  }
+
+  const togglePurchasePauseEnabled = async () => {
+    const { data } = await supabase
+      .from('persona')
+      .update({ purchase_pause_enabled: !persona.purchase_pause_enabled })
+      .eq('user_id', persona.user_id)
+      .select()
+      .single()
+    if (data) onPersonaUpdated(data as Persona)
+  }
+
+  const handlePurchasePauseWaitHoursChange = async (e: ChangeEvent<HTMLSelectElement>) => {
+    const { data } = await supabase
+      .from('persona')
+      .update({ purchase_pause_wait_hours: Number(e.target.value) as PurchasePauseWaitHours })
+      .eq('user_id', persona.user_id)
+      .select()
+      .single()
+    if (data) onPersonaUpdated(data as Persona)
+  }
+
+  const handlePurchasePauseMinAmountChange = async (e: FocusEvent<HTMLInputElement>) => {
+    const amount = Number(e.target.value)
+    if (Number.isNaN(amount) || amount < 0) return
+    const { data } = await supabase
+      .from('persona')
+      .update({ purchase_pause_min_amount: amount })
       .eq('user_id', persona.user_id)
       .select()
       .single()
@@ -293,6 +325,53 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
           <option value="text">텍스트</option>
           <option value="voice">음성</option>
         </select>
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-stone-700">지출 충동 일시정지</p>
+            <p className="mt-0.5 text-xs text-stone-400">
+              "사고 싶어" 같은 말을 하면 바로 판단하지 않고, 설정한 시간 뒤에 한 번 더 살짝 물어봐요.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={togglePurchasePauseEnabled}
+            className="shrink-0 rounded-full bg-stone-100 px-3 py-1.5 text-xs font-medium text-stone-600"
+          >
+            {persona.purchase_pause_enabled ? '켜짐' : '꺼짐'}
+          </button>
+        </div>
+
+        {persona.purchase_pause_enabled && (
+          <div className="flex flex-col gap-2 border-t border-stone-100 pt-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-stone-500">다시 물어볼 때까지</p>
+              <select
+                value={persona.purchase_pause_wait_hours}
+                onChange={handlePurchasePauseWaitHoursChange}
+                className="rounded-full border border-stone-200 bg-transparent px-2 py-1 text-xs text-stone-600 outline-none"
+              >
+                <option value={12}>12시간</option>
+                <option value={24}>24시간</option>
+                <option value={72}>3일</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-stone-500">이 금액 이상일 때만</p>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  defaultValue={persona.purchase_pause_min_amount}
+                  onBlur={handlePurchasePauseMinAmountChange}
+                  className="w-20 rounded-full border border-stone-200 px-2 py-1 text-right text-xs text-stone-600 outline-none"
+                />
+                <span className="text-xs text-stone-400">원</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <AppFeedbackForm userId={persona.user_id} />

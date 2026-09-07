@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { diceSimilarity } from '../lib/textSimilarity'
 import { supabase } from '../supabaseClient'
 import type {
+  PurchasePause,
+  PurchasePauseWaitHours,
   QuickEntryMode,
   QuickPhrase,
   RawLog,
@@ -17,6 +19,9 @@ interface Props {
   autoQuickEntry?: boolean
   quickEntryMode?: QuickEntryMode
   onQuickEntryHandled?: () => void
+  purchasePauseEnabled?: boolean
+  purchasePauseWaitHours?: PurchasePauseWaitHours
+  purchasePauseMinAmount?: number
 }
 
 interface CompletionCandidate {
@@ -61,7 +66,15 @@ function blobToBase64(blob: Blob): Promise<string> {
   })
 }
 
-export function DailyLogInput({ userId, autoQuickEntry, quickEntryMode, onQuickEntryHandled }: Props) {
+export function DailyLogInput({
+  userId,
+  autoQuickEntry,
+  quickEntryMode,
+  onQuickEntryHandled,
+  purchasePauseEnabled,
+  purchasePauseWaitHours,
+  purchasePauseMinAmount,
+}: Props) {
   const [input, setInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [recording, setRecording] = useState(false)
@@ -75,6 +88,7 @@ export function DailyLogInput({ userId, autoQuickEntry, quickEntryMode, onQuickE
   const [quickPhrases, setQuickPhrases] = useState<QuickPhrase[]>([])
   const [editingPhrases, setEditingPhrases] = useState(false)
   const [newPhraseText, setNewPhraseText] = useState('')
+  const [duePauses, setDuePauses] = useState<PurchasePause[]>([])
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -118,11 +132,30 @@ export function DailyLogInput({ userId, autoQuickEntry, quickEntryMode, onQuickE
     setQuickPhrases((data as QuickPhrase[] | null) ?? [])
   }
 
+  // 지출 충동 일시정지: 대기 시간이 지난 항목만 조용히 다시 물어본다. 실제 알림 발송은
+  // 없고, 앱을 열었을 때만 보여준다.
+  const loadDuePauses = async () => {
+    const { data } = await supabase
+      .from('purchase_pause')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('resolved', false)
+      .lte('remind_at', new Date().toISOString())
+      .order('remind_at', { ascending: true })
+    setDuePauses((data as PurchasePause[] | null) ?? [])
+  }
+
   useEffect(() => {
     loadTodayLogs()
     loadOverdueLogs()
     loadQuickPhrases()
+    loadDuePauses()
   }, [])
+
+  const handleResolvePause = async (id: string) => {
+    await supabase.from('purchase_pause').update({ resolved: true }).eq('id', id)
+    setDuePauses((prev) => prev.filter((p) => p.id !== id))
+  }
 
   // 매번 같은 말을 새로 타이핑/녹음하는 부담을 줄이기 위해, 저장해둔 문구를 그대로
   // 구조화 파이프라인에 태워 기록한다(직접 말한 것과 동일하게 처리됨).
@@ -219,6 +252,24 @@ export function DailyLogInput({ userId, autoQuickEntry, quickEntryMode, onQuickE
     }
   }
 
+  // "이거 사고 싶어" 같은 구매 욕구가 감지되면(옵트인 상태일 때만), 바로 판단하지 않고
+  // 설정한 시간 뒤에 한 번 더 물어볼 수 있게 대기열에 넣는다. 가격이 언급되지 않았거나
+  // 기준 금액에 못 미치면 반응하지 않는다.
+  const tryQueuePurchasePause = async (entry: StructuredEntry) => {
+    if (!purchasePauseEnabled) return
+    const amount = entry.content.amount
+    if (amount == null || amount < (purchasePauseMinAmount ?? 0)) return
+
+    const waitHours = purchasePauseWaitHours ?? 24
+    const remindAt = new Date(Date.now() + waitHours * 60 * 60 * 1000).toISOString()
+    await supabase.from('purchase_pause').insert({
+      user_id: userId,
+      item: entry.content.item ?? entry.content.description ?? '그 물건',
+      amount,
+      remind_at: remindAt,
+    })
+  }
+
   const handleDelete = async (id: string) => {
     const { error: deleteError } = await supabase.from('raw_log').delete().eq('id', id)
     if (deleteError) {
@@ -254,6 +305,9 @@ export function DailyLogInput({ userId, autoQuickEntry, quickEntryMode, onQuickE
         await saveEntry(entry)
         if (entry.isCompletion && entry.completionSubject) {
           await tryAutoComplete(entry.completionSubject)
+        }
+        if (entry.isPurchaseIntent) {
+          await tryQueuePurchasePause(entry)
         }
       }
       if (ready.length > 0) await loadTodayLogs()
@@ -364,6 +418,23 @@ export function DailyLogInput({ userId, autoQuickEntry, quickEntryMode, onQuickE
               괜찮아요
             </button>
           </div>
+        </div>
+      )}
+
+      {duePauses.length > 0 && (
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl bg-amber-100 px-4 py-3 text-sm text-amber-800">
+          <span>
+            '{duePauses[0].item}'
+            {duePauses[0].amount != null ? ` (${duePauses[0].amount.toLocaleString()}원)` : ''} 아직 생각하고
+            있어요? 그때 마음이 여전한지만 살짝 확인해봐요.
+          </span>
+          <button
+            type="button"
+            onClick={() => handleResolvePause(duePauses[0].id)}
+            className="shrink-0 rounded-full bg-white px-3 py-1 text-xs text-amber-700"
+          >
+            알겠어요
+          </button>
         </div>
       )}
 

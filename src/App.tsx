@@ -68,6 +68,9 @@ function Home({
             autoQuickEntry={quickEntryRequested}
             quickEntryMode={persona.quick_entry_mode}
             onQuickEntryHandled={() => setQuickEntryRequested(false)}
+            purchasePauseEnabled={persona.purchase_pause_enabled}
+            purchasePauseWaitHours={persona.purchase_pause_wait_hours}
+            purchasePauseMinAmount={persona.purchase_pause_min_amount}
           />
         )}
         {tab === 'schedule' && <ScheduleTab userId={persona.user_id} />}
