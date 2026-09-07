@@ -57,7 +57,7 @@
 **중요 원칙**:
 - Supabase anon key는 공개되어도 안전한 키이므로 `.gitignore`에 넣지 않아도 됨.
 - 파생값(마일스톤 카운트, 쿠폰 지급 여부 등)은 클라이언트 값을 신뢰하지 말고 **반드시 DB 트리거로 서버사이드 계산**할 것.
-- `vercel --prod`로 수동 배포 방식 사용 중 (Git 자동배포 연결 안 함).
+- Vercel과 GitHub 저장소(eunbel22/diary_project)가 연결되어 있어 `main`에 머지되면 자동 배포됨(`vercel --prod` 수동 실행 불필요). 새 Supabase 마이그레이션이 있을 때만 별도로 적용할 것.
 
 ---
 
