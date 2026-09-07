@@ -1,4 +1,4 @@
-import { capLength } from '../src/lib/textSanitize'
+import { capLength } from '../src/lib/textSanitize.js'
 import type { DiaryFormat, RawLogContent, RawLogType } from '../src/types'
 
 const GEMINI_MODEL = 'gemini-3.5-flash-lite'
