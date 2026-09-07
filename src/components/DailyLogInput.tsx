@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { looksLikeLargeTask } from '../lib/taskBreakdown'
 import { diceSimilarity } from '../lib/textSimilarity'
 import { supabase } from '../supabaseClient'
 import type {
@@ -12,16 +13,21 @@ import type {
   RawLogWithStatus,
   StructuredEntry,
   StructureLogResponse,
+  TaskBreakdownDetail,
 } from '../types'
 
 interface Props {
   userId: string
+  personaName: string
+  personaTone: string
   autoQuickEntry?: boolean
   quickEntryMode?: QuickEntryMode
   onQuickEntryHandled?: () => void
   purchasePauseEnabled?: boolean
   purchasePauseWaitHours?: PurchasePauseWaitHours
   purchasePauseMinAmount?: number
+  taskBreakdownEnabled?: boolean
+  taskBreakdownDetail?: TaskBreakdownDetail
 }
 
 interface CompletionCandidate {
@@ -68,12 +74,16 @@ function blobToBase64(blob: Blob): Promise<string> {
 
 export function DailyLogInput({
   userId,
+  personaName,
+  personaTone,
   autoQuickEntry,
   quickEntryMode,
   onQuickEntryHandled,
   purchasePauseEnabled,
   purchasePauseWaitHours,
   purchasePauseMinAmount,
+  taskBreakdownEnabled,
+  taskBreakdownDetail,
 }: Props) {
   const [input, setInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -89,6 +99,9 @@ export function DailyLogInput({
   const [editingPhrases, setEditingPhrases] = useState(false)
   const [newPhraseText, setNewPhraseText] = useState('')
   const [duePauses, setDuePauses] = useState<PurchasePause[]>([])
+  const [breakdownDismissed, setBreakdownDismissed] = useState(false)
+  const [breakdownGenerating, setBreakdownGenerating] = useState(false)
+  const [breakdownSteps, setBreakdownSteps] = useState<string[] | null>(null)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -111,7 +124,7 @@ export function DailyLogInput({
     const today = todayISO()
     const { data } = await supabase
       .from('raw_log')
-      .select('*, task_status(completed)')
+      .select('*, task_status(completed), task_breakdown(steps)')
       .eq('user_id', userId)
       .in('type', ['schedule', 'task'])
     const rows = (data as RawLogWithStatus[] | null) ?? []
@@ -155,6 +168,40 @@ export function DailyLogInput({
   const handleResolvePause = async (id: string) => {
     await supabase.from('purchase_pause').update({ resolved: true }).eq('id', id)
     setDuePauses((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  // 밀린 할일 중 크고 막연해 보이는 것이 있으면(옵트인 상태일 때만) 이관 배너에 얹어서
+  // 잘게 나눠줄지 제안한다. 실제로 체크하며 진행하는 건 일정 탭에서 한다.
+  const handleGenerateOverdueBreakdown = async (log: RawLogWithStatus) => {
+    if (!log.content.title) return
+    setBreakdownGenerating(true)
+    try {
+      const res = await fetch('/api/generate-task-breakdown', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          personaName,
+          personaTone,
+          title: log.content.title,
+          detail: taskBreakdownDetail,
+        }),
+      })
+      if (!res.ok) throw new Error('generate-task-breakdown failed')
+      const { steps }: { steps: string[] } = await res.json()
+      if (steps.length === 0) return
+
+      await supabase.from('task_breakdown').upsert({
+        raw_log_id: log.id,
+        user_id: userId,
+        steps: steps.map((text) => ({ text, completed: false })),
+      })
+      setBreakdownSteps(steps)
+      await loadOverdueLogs()
+    } catch (err) {
+      console.error('할일 나누기 실패:', err)
+    } finally {
+      setBreakdownGenerating(false)
+    }
   }
 
   // 매번 같은 말을 새로 타이핑/녹음하는 부담을 줄이기 위해, 저장해둔 문구를 그대로
@@ -395,6 +442,10 @@ export function DailyLogInput({
     }
   }
 
+  const largeOverdueTask = overdueLogs.find(
+    (log) => log.type === 'task' && looksLikeLargeTask(log.content.title) && !log.task_breakdown?.steps?.length,
+  )
+
   return (
     <div className="mx-auto w-full max-w-lg px-4">
       {overdueLogs.length > 0 && !migratePromptDismissed && (
@@ -418,6 +469,53 @@ export function DailyLogInput({
               괜찮아요
             </button>
           </div>
+        </div>
+      )}
+
+      {taskBreakdownEnabled && largeOverdueTask && !breakdownDismissed && (
+        <div className="mb-3 flex flex-col gap-2 rounded-2xl bg-amber-100 px-4 py-3 text-sm text-amber-800">
+          {breakdownSteps ? (
+            <>
+              <span>'{largeOverdueTask.content.title}'을 이렇게 나눠봤어요. 일정 탭에서 체크할 수 있어요.</span>
+              <ul className="ml-4 list-disc text-xs text-amber-700">
+                {breakdownSteps.map((step, index) => (
+                  <li key={index}>{step}</li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                onClick={() => {
+                  setBreakdownSteps(null)
+                  setBreakdownDismissed(true)
+                }}
+                className="self-start rounded-full bg-white px-3 py-1 text-xs text-amber-700"
+              >
+                알겠어요
+              </button>
+            </>
+          ) : (
+            <div className="flex items-center justify-between gap-3">
+              <span>'{largeOverdueTask.content.title}'은 좀 커 보여요. 잘게 나눠줄까요?</span>
+              <div className="flex shrink-0 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleGenerateOverdueBreakdown(largeOverdueTask)}
+                  disabled={breakdownGenerating}
+                  className="rounded-full bg-amber-500 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+                >
+                  {breakdownGenerating ? '나누는 중...' : '나눠줘'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBreakdownDismissed(true)}
+                  disabled={breakdownGenerating}
+                  className="rounded-full bg-white px-3 py-1 text-xs text-amber-700"
+                >
+                  괜찮아요
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

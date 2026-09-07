@@ -4,6 +4,7 @@ export type InsightPeriod = 'week' | 'month'
 export type QuickEntryMode = 'text' | 'voice'
 export type PurchasePauseWaitHours = 12 | 24 | 72
 export type WeeklyReviewPeriod = 'weekly' | 'biweekly'
+export type TaskBreakdownDetail = 'simple' | 'detailed'
 
 export interface Persona {
   user_id: string
@@ -23,6 +24,8 @@ export interface Persona {
   purchase_pause_min_amount: number
   weekly_review_period: WeeklyReviewPeriod
   weekly_review_include_emotion: boolean
+  task_breakdown_enabled: boolean
+  task_breakdown_detail: TaskBreakdownDetail
   created_at: string
 }
 
@@ -79,11 +82,24 @@ export interface TaskStatus {
   updated_at: string
 }
 
-// schedule/task 조회 시 task_status를 함께 embed해서 받아올 때 쓰는 형태.
-// raw_log_id가 task_status의 기본키라 PostgREST가 1:1 관계로 인식해 배열이 아니라
+export interface TaskBreakdownStep {
+  text: string
+  completed: boolean
+}
+
+export interface TaskBreakdown {
+  raw_log_id: string
+  user_id: string
+  steps: TaskBreakdownStep[]
+  created_at: string
+}
+
+// schedule/task 조회 시 task_status·task_breakdown을 함께 embed해서 받아올 때 쓰는 형태.
+// raw_log_id가 각각의 기본키라 PostgREST가 1:1 관계로 인식해 배열이 아니라
 // 객체 하나(또는 null)로 내려준다.
 export interface RawLogWithStatus extends RawLog {
   task_status?: { completed: boolean } | null
+  task_breakdown?: { steps: TaskBreakdownStep[] } | null
 }
 
 export interface ConsumptionCategoryRow {

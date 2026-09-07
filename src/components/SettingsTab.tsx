@@ -8,6 +8,7 @@ import type {
   Persona,
   PurchasePauseWaitHours,
   QuickEntryMode,
+  TaskBreakdownDetail,
   WeeklyReviewPeriod,
 } from '../types'
 
@@ -29,6 +30,7 @@ const EXPORT_TABLES = [
   'app_feedback',
   'purchase_pause',
   'weekly_review',
+  'task_breakdown',
 ] as const
 
 const SCREENING_LABEL: Record<AdhdScreeningResult, string> = {
@@ -152,6 +154,26 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
     const { data } = await supabase
       .from('persona')
       .update({ purchase_pause_min_amount: amount })
+      .eq('user_id', persona.user_id)
+      .select()
+      .single()
+    if (data) onPersonaUpdated(data as Persona)
+  }
+
+  const toggleTaskBreakdownEnabled = async () => {
+    const { data } = await supabase
+      .from('persona')
+      .update({ task_breakdown_enabled: !persona.task_breakdown_enabled })
+      .eq('user_id', persona.user_id)
+      .select()
+      .single()
+    if (data) onPersonaUpdated(data as Persona)
+  }
+
+  const handleTaskBreakdownDetailChange = async (e: ChangeEvent<HTMLSelectElement>) => {
+    const { data } = await supabase
+      .from('persona')
+      .update({ task_breakdown_detail: e.target.value as TaskBreakdownDetail })
       .eq('user_id', persona.user_id)
       .select()
       .single()
@@ -399,6 +421,38 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
                 <span className="text-xs text-stone-400">원</span>
               </div>
             </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-stone-700">작업 마이크로 분해</p>
+            <p className="mt-0.5 text-xs text-stone-400">
+              크고 막연한 할일을 캐릭터가 잘게 나눠 제안해요. 일정 탭에서 항목마다 직접 요청할 수도 있어요.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={toggleTaskBreakdownEnabled}
+            className="shrink-0 rounded-full bg-stone-100 px-3 py-1.5 text-xs font-medium text-stone-600"
+          >
+            {persona.task_breakdown_enabled ? '켜짐' : '꺼짐'}
+          </button>
+        </div>
+
+        {persona.task_breakdown_enabled && (
+          <div className="flex items-center justify-between border-t border-stone-100 pt-3">
+            <p className="text-xs text-stone-500">분해 단계 수</p>
+            <select
+              value={persona.task_breakdown_detail}
+              onChange={handleTaskBreakdownDetailChange}
+              className="rounded-full border border-stone-200 bg-transparent px-2 py-1 text-xs text-stone-600 outline-none"
+            >
+              <option value="simple">간단히(2~3단계)</option>
+              <option value="detailed">자세히(4~5단계)</option>
+            </select>
           </div>
         )}
       </div>

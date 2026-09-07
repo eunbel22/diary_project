@@ -65,15 +65,27 @@ function Home({
         {tab === 'today' && (
           <DailyLogInput
             userId={persona.user_id}
+            personaName={persona.name}
+            personaTone={persona.tone}
             autoQuickEntry={quickEntryRequested}
             quickEntryMode={persona.quick_entry_mode}
             onQuickEntryHandled={() => setQuickEntryRequested(false)}
             purchasePauseEnabled={persona.purchase_pause_enabled}
             purchasePauseWaitHours={persona.purchase_pause_wait_hours}
             purchasePauseMinAmount={persona.purchase_pause_min_amount}
+            taskBreakdownEnabled={persona.task_breakdown_enabled}
+            taskBreakdownDetail={persona.task_breakdown_detail}
           />
         )}
-        {tab === 'schedule' && <ScheduleTab userId={persona.user_id} />}
+        {tab === 'schedule' && (
+          <ScheduleTab
+            userId={persona.user_id}
+            personaName={persona.name}
+            personaTone={persona.tone}
+            taskBreakdownEnabled={persona.task_breakdown_enabled}
+            taskBreakdownDetail={persona.task_breakdown_detail}
+          />
+        )}
         {tab === 'consumption' && <ConsumptionTab userId={persona.user_id} />}
         {tab === 'diary' && <DiaryTab persona={persona} onPersonaUpdated={onPersonaUpdated} />}
         {tab === 'settings' && (
