@@ -1,5 +1,6 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { AdhdScreening } from './AdhdScreening'
+import { AppFeedbackForm } from './AppFeedbackForm'
 import { supabase } from '../supabaseClient'
 import type { AdhdScreeningResult, InsightPeriod, Persona, QuickEntryMode } from '../types'
 
@@ -18,6 +19,7 @@ const EXPORT_TABLES = [
   'consumption_category',
   'consumption_override',
   'quick_phrase',
+  'app_feedback',
 ] as const
 
 const SCREENING_LABEL: Record<AdhdScreeningResult, string> = {
@@ -292,6 +294,8 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
           <option value="voice">음성</option>
         </select>
       </div>
+
+      <AppFeedbackForm userId={persona.user_id} />
 
       <button
         type="button"

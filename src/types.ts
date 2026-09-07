@@ -102,6 +102,14 @@ export interface QuickPhrase {
   created_at: string
 }
 
+export interface AppFeedback {
+  id: string
+  user_id: string
+  rating: number
+  comment: string | null
+  created_at: string
+}
+
 export interface StructuredEntry {
   type: RawLogType
   content: RawLogContent
