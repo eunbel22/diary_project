@@ -2,7 +2,14 @@ import { useEffect, useState, type ChangeEvent, type FocusEvent } from 'react'
 import { AdhdScreening } from './AdhdScreening'
 import { AppFeedbackForm } from './AppFeedbackForm'
 import { supabase } from '../supabaseClient'
-import type { AdhdScreeningResult, InsightPeriod, Persona, PurchasePauseWaitHours, QuickEntryMode } from '../types'
+import type {
+  AdhdScreeningResult,
+  InsightPeriod,
+  Persona,
+  PurchasePauseWaitHours,
+  QuickEntryMode,
+  WeeklyReviewPeriod,
+} from '../types'
 
 interface Props {
   persona: Persona
@@ -20,6 +27,8 @@ const EXPORT_TABLES = [
   'consumption_override',
   'quick_phrase',
   'app_feedback',
+  'purchase_pause',
+  'weekly_review',
 ] as const
 
 const SCREENING_LABEL: Record<AdhdScreeningResult, string> = {
@@ -143,6 +152,26 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
     const { data } = await supabase
       .from('persona')
       .update({ purchase_pause_min_amount: amount })
+      .eq('user_id', persona.user_id)
+      .select()
+      .single()
+    if (data) onPersonaUpdated(data as Persona)
+  }
+
+  const handleWeeklyReviewPeriodChange = async (e: ChangeEvent<HTMLSelectElement>) => {
+    const { data } = await supabase
+      .from('persona')
+      .update({ weekly_review_period: e.target.value as WeeklyReviewPeriod })
+      .eq('user_id', persona.user_id)
+      .select()
+      .single()
+    if (data) onPersonaUpdated(data as Persona)
+  }
+
+  const toggleWeeklyReviewIncludeEmotion = async () => {
+    const { data } = await supabase
+      .from('persona')
+      .update({ weekly_review_include_emotion: !persona.weekly_review_include_emotion })
       .eq('user_id', persona.user_id)
       .select()
       .single()
@@ -372,6 +401,40 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-stone-700">주간 회고</p>
+            <p className="mt-0.5 text-xs text-stone-400">
+              좋았던 순간 위주로 캐릭터가 정리해줘요. 놓친 건 언급하지 않아요.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 border-t border-stone-100 pt-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-stone-500">주기</p>
+            <select
+              value={persona.weekly_review_period}
+              onChange={handleWeeklyReviewPeriodChange}
+              className="rounded-full border border-stone-200 bg-transparent px-2 py-1 text-xs text-stone-600 outline-none"
+            >
+              <option value="weekly">매주</option>
+              <option value="biweekly">격주</option>
+            </select>
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-stone-500">감정 요약 함께 포함</p>
+            <button
+              type="button"
+              onClick={toggleWeeklyReviewIncludeEmotion}
+              className="shrink-0 rounded-full bg-stone-100 px-3 py-1.5 text-xs font-medium text-stone-600"
+            >
+              {persona.weekly_review_include_emotion ? '켜짐' : '꺼짐'}
+            </button>
+          </div>
+        </div>
       </div>
 
       <AppFeedbackForm userId={persona.user_id} />

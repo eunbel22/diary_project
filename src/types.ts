@@ -3,6 +3,7 @@ export type DiaryFormat = 'paragraph' | 'list'
 export type InsightPeriod = 'week' | 'month'
 export type QuickEntryMode = 'text' | 'voice'
 export type PurchasePauseWaitHours = 12 | 24 | 72
+export type WeeklyReviewPeriod = 'weekly' | 'biweekly'
 
 export interface Persona {
   user_id: string
@@ -20,6 +21,8 @@ export interface Persona {
   purchase_pause_enabled: boolean
   purchase_pause_wait_hours: PurchasePauseWaitHours
   purchase_pause_min_amount: number
+  weekly_review_period: WeeklyReviewPeriod
+  weekly_review_include_emotion: boolean
   created_at: string
 }
 
@@ -147,6 +150,15 @@ export interface DiaryEntry {
   version: number
   created_at: string
   updated_at: string
+}
+
+export interface WeeklyReview {
+  id: string
+  user_id: string
+  period_start: string
+  period_end: string
+  body: string
+  created_at: string
 }
 
 export interface Coupon {

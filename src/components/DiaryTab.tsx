@@ -4,6 +4,7 @@ import { DiarySection } from './DiarySection'
 import { EmotionSpendingInsight } from './EmotionSpendingInsight'
 import { EmotionSummary } from './EmotionSummary'
 import { PersonaRebuildChat } from './PersonaRebuildChat'
+import { WeeklyReview } from './WeeklyReview'
 import type { Persona } from '../types'
 
 interface Props {
@@ -42,6 +43,13 @@ export function DiaryTab({ persona, onPersonaUpdated }: Props) {
           emotionFocus={persona.insight_emotion_focus}
         />
       )}
+      <WeeklyReview
+        userId={persona.user_id}
+        personaName={persona.name}
+        personaTone={persona.tone}
+        period={persona.weekly_review_period}
+        includeEmotion={persona.weekly_review_include_emotion}
+      />
       <ArchiveSection userId={persona.user_id} onStartRebuild={() => setRebuilding(true)} />
     </div>
   )
