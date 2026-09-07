@@ -1,4 +1,4 @@
-import { sanitizeText } from '../src/lib/textSanitize'
+import { sanitizeText } from '../src/lib/textSanitize.js'
 import type { ConsumptionCategory, RawLogContent, StructureLogResponse } from '../src/types'
 
 const GEMINI_MODEL = 'gemini-3.5-flash-lite'
