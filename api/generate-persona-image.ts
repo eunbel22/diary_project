@@ -30,9 +30,12 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   const prompt = [
     '따뜻하고 부드러운 색연필 느낌의 다이어리 캐릭터 초상화.',
-    `이름: ${name}.`,
+    `이 캐릭터의 애칭은 "${name}"입니다 — 이건 그냥 부르는 이름일 뿐이니, 이름 자체의 사전적`,
+    '의미(동물·사물 등)를 그대로 그리지 마세요.',
     `성격과 말투: ${tone}.`,
-    interests?.length ? `관심사: ${interests.join(', ')}.` : '',
+    interests?.length
+      ? `관심사: ${interests.join(', ')}. 이 중 하나를 소품이나 배경 색감에 아주 자연스럽게(과하지 않게) 녹여주세요.`
+      : '',
     '배경은 단순하고, 얼굴과 상반신이 보이는 정면 초상. 텍스트 없음.',
   ]
     .filter(Boolean)
