@@ -75,7 +75,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
       const bytes = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0))
       const ext = EXTENSION_BY_MIME[mimeType ?? ''] ?? 'png'
-      const path = `${tags.join('-')}/${randomUUID()}.${ext}`
+      // Storage 객체 키는 비-ASCII 문자(한글 태그 등)를 허용하지 않아서, 태그는 DB의
+      // tags 컬럼에만 저장하고 파일 경로는 랜덤 이름만 쓴다.
+      const path = `${randomUUID()}.${ext}`
 
       const { error: uploadError } = await admin.storage
         .from(BUCKET)

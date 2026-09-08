@@ -94,7 +94,9 @@ async function main() {
     try {
       const bytes = readFileSync(filePath)
       const ext = extname(filePath).toLowerCase()
-      const path = `${tags.join('-')}/${randomUUID()}${ext}`
+      // Storage 객체 키는 한글 등 비-ASCII 문자를 허용하지 않아서, 태그(폴더 이름)는 DB의
+      // tags 컬럼에만 저장하고 파일 경로는 랜덤 이름만 쓴다.
+      const path = `${randomUUID()}${ext}`
 
       const { error: uploadError } = await admin.storage
         .from(BUCKET)

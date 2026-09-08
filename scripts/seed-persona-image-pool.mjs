@@ -84,7 +84,9 @@ async function main() {
       try {
         const base64 = await generateImage(apiKey, tag)
         const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
-        const path = `${tag}/${randomUUID()}.png`
+        // Storage 객체 키는 한글 등 비-ASCII 문자를 허용하지 않아서, 태그는 DB의 tags
+        // 컬럼에만 저장하고 파일 경로는 랜덤 이름만 쓴다.
+        const path = `${randomUUID()}.png`
 
         const { error: uploadError } = await admin.storage
           .from(BUCKET)
