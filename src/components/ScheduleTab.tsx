@@ -232,6 +232,7 @@ export function ScheduleTab({ userId, personaName, personaTone, taskBreakdownEna
           personaName,
           personaTone,
           title: log.content.title,
+          context: log.content.raw_text ?? log.content.description,
           detail: taskBreakdownDetail,
         }),
       })

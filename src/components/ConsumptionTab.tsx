@@ -102,6 +102,19 @@ export function ConsumptionTab({ userId }: Props) {
     await loadCategories()
   }
 
+  // 인접한 두 카테고리의 sort_order를 맞바꾼다. 드래그 없이 화살표만으로 순서를 바꾼다.
+  const handleMoveCategory = async (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= categories.length) return
+    const current = categories[index]
+    const target = categories[targetIndex]
+    await Promise.all([
+      supabase.from('consumption_category').update({ sort_order: target.sort_order }).eq('id', current.id),
+      supabase.from('consumption_category').update({ sort_order: current.sort_order }).eq('id', target.id),
+    ])
+    await loadCategories()
+  }
+
   if (loading) return null
 
   const total = logs.reduce((sum, log) => sum + (log.content.amount ?? 0), 0)
@@ -173,8 +186,28 @@ export function ConsumptionTab({ userId }: Props) {
 
         {managingCategories && (
           <div className="mt-3 flex flex-col gap-2">
-            {categories.map((category) => (
-              <div key={category.id} className="flex items-center gap-2">
+            {categories.map((category, index) => (
+              <div key={category.id} className="flex items-center gap-1">
+                <div className="flex flex-col">
+                  <button
+                    type="button"
+                    onClick={() => handleMoveCategory(index, -1)}
+                    disabled={index === 0}
+                    aria-label="위로 이동"
+                    className="leading-none text-stone-300 hover:text-stone-500 disabled:opacity-30"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMoveCategory(index, 1)}
+                    disabled={index === categories.length - 1}
+                    aria-label="아래로 이동"
+                    className="leading-none text-stone-300 hover:text-stone-500 disabled:opacity-30"
+                  >
+                    ▼
+                  </button>
+                </div>
                 <input
                   defaultValue={category.name}
                   onBlur={(e) => handleRenameCategory(category.id, e.target.value)}

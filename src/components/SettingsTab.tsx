@@ -365,7 +365,8 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
         <div>
           <p className="text-sm font-medium text-stone-700">홈 화면 바로가기 기본 모드</p>
           <p className="mt-0.5 text-xs text-stone-400">
-            홈 화면 아이콘의 "빠른 기록" 바로가기로 들어오면 이 모드로 바로 시작해요.
+            이 앱을 홈 화면에 설치했다면(브라우저의 "홈 화면에 추가"), 아이콘을 길게 눌러 나오는
+            "빠른 기록" 바로가기로 들어올 때 이 모드로 바로 시작해요.
           </p>
         </div>
         <select
@@ -383,7 +384,9 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
           <div>
             <p className="text-sm font-medium text-stone-700">지출 충동 일시정지</p>
             <p className="mt-0.5 text-xs text-stone-400">
-              "사고 싶어" 같은 말을 하면 바로 판단하지 않고, 설정한 시간 뒤에 한 번 더 살짝 물어봐요.
+              "이거 얼마인데 사고 싶어"처럼 사려는 물건과 가격을 같이 말하면(가격이 없으면
+              작동하지 않아요), 그 금액이 아래 기준 이상일 때만 바로 판단하지 않고 설정한 시간
+              뒤에 한 번 더 살짝 물어봐요.
             </p>
           </div>
           <button
