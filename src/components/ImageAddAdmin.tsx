@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import { PERSONA_ACTIVITY_TAGS, PERSONA_MOOD_TAGS } from '../lib/personaTags'
 import { supabase } from '../supabaseClient'
 
@@ -33,6 +33,8 @@ export function ImageAddAdmin() {
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [isDraggingOver, setIsDraggingOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const checkAuthorized = async () => {
     const {
@@ -69,6 +71,13 @@ export function ImageAddAdmin() {
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFiles(Array.from(e.target.files ?? []))
+  }
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsDraggingOver(false)
+    const dropped = Array.from(e.dataTransfer.files).filter((file) => file.type.startsWith('image/'))
+    if (dropped.length > 0) setFiles(dropped)
   }
 
   const handleUpload = async () => {
@@ -215,8 +224,28 @@ export function ImageAddAdmin() {
 
         <div>
           <p className="mb-2 text-sm font-medium text-stone-700">이미지 파일 (여러 개 선택하면 같은 태그로 한 번에 등록)</p>
-          <input type="file" accept="image/*" multiple onChange={handleFileChange} className="text-sm" />
-          {files.length > 0 && <p className="mt-1 text-xs text-stone-400">{files.length}개 선택됨</p>}
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault()
+              setIsDraggingOver(true)
+            }}
+            onDragLeave={() => setIsDraggingOver(false)}
+            onDrop={handleDrop}
+            className={`cursor-pointer rounded-xl border-2 border-dashed px-4 py-8 text-center text-sm transition-colors ${
+              isDraggingOver ? 'border-amber-400 bg-amber-50 text-amber-600' : 'border-stone-200 text-stone-400'
+            }`}
+          >
+            {files.length > 0 ? `${files.length}개 선택됨 (다시 클릭해서 변경)` : '클릭하거나 이미지를 여기로 끌어다 놓으세요'}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileChange}
+            className="hidden"
+          />
         </div>
 
         <button
