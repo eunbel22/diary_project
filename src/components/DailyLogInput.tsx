@@ -674,12 +674,12 @@ export function DailyLogInput({
                   삭제
                 </button>
               </div>
-              {log.content.raw_text && (
-                <p className="mt-1 break-words text-stone-700">{log.content.raw_text}</p>
-              )}
-              <p className="mt-0.5 break-words text-xs text-stone-400">
+              <p className="mt-1 break-words font-medium text-stone-700">
                 {summarize(log.type, log.content)}
               </p>
+              {log.content.raw_text && (
+                <p className="mt-0.5 break-words text-xs text-stone-400">"{log.content.raw_text}"</p>
+              )}
             </div>
           ))}
         </div>

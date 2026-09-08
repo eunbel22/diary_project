@@ -7,6 +7,7 @@ interface Props {
   personaName: string
   personaTone: string
   diaryFormat: DiaryFormat
+  onDiarySaved?: () => void
 }
 
 function todayISO() {
@@ -52,7 +53,7 @@ function playScratchTick(ctx: AudioContext) {
   noise.stop(now + duration)
 }
 
-export function DiarySection({ userId, personaName, personaTone, diaryFormat }: Props) {
+export function DiarySection({ userId, personaName, personaTone, diaryFormat, onDiarySaved }: Props) {
   const [entry, setEntry] = useState<DiaryEntry | null>(null)
   const [loadingInitial, setLoadingInitial] = useState(true)
   const [generating, setGenerating] = useState(false)
@@ -186,6 +187,7 @@ export function DiarySection({ userId, personaName, personaTone, diaryFormat }: 
       setAnimating(true)
       setShowFeedback(false)
       setFeedbackText('')
+      onDiarySaved?.()
     } catch (err) {
       setError('다이어리를 쓰는 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.')
       console.error(err)
@@ -203,9 +205,16 @@ export function DiarySection({ userId, personaName, personaTone, diaryFormat }: 
           type="button"
           onClick={() => generate()}
           disabled={generating}
-          className="w-full rounded-2xl bg-white px-4 py-3 text-sm font-medium text-stone-600 shadow-sm disabled:opacity-60"
+          className="w-full rounded-2xl bg-white px-4 py-3 text-left shadow-sm disabled:opacity-60"
         >
-          {generating ? '오늘 하루를 적고 있어요...' : '오늘 하루, 다이어리로 남겨볼까요?'}
+          <p className="text-sm font-medium text-stone-600">
+            {generating ? '오늘 하루를 적고 있어요...' : '오늘 하루, 다이어리로 남겨볼까요?'}
+          </p>
+          {!generating && (
+            <p className="mt-0.5 text-xs text-stone-400">
+              오늘 탭에 남긴 기록들을 모아서 캐릭터가 다이어리로 써드려요.
+            </p>
+          )}
         </button>
       )}
 

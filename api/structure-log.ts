@@ -107,6 +107,9 @@ function buildSystemPrompt(today: string) {
 - item(항목), place(장소), time(시간), emotion(감정) 등 금액 외의 정보는 언급이 없으면 맥락에 맞게
   자연스럽게 추정해서 채우고, 절대 사용자에게 되묻지 않습니다. 하나라도 추정한 값이 있으면 그 항목의
   isEstimated를 true로 설정합니다.
+- emotion은 event뿐 아니라 consumption·schedule·task에도, 말 속에 드러나는 감정이 있으면 놓치지 않고
+  담습니다. "좋았다/슬펐다"처럼 뚜렷한 감정만이 아니라 "아깝다"(아쉬움·후회), "기대된다"(기대감),
+  "귀찮다", "뿌듯하다", "설렌다"처럼 미묘한 감정 표현도 감정으로 포착합니다.
 - schedule/task/event의 content.date는 언급이 없으면 오늘 날짜(${today})로 자동 채웁니다. 날짜를
   확인하는 질문을 하지 않습니다. task의 제목은 content.title에 적습니다.
 - 판단하거나 평가하는 내용을 덧붙이지 않고, 사용자가 말한 사실만 담백하게 기록합니다.`
