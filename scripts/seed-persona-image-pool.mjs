@@ -5,7 +5,10 @@
 //   GEMINI_API_KEY=... VITE_SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
 //     node scripts/seed-persona-image-pool.mjs [개수(태그당, 기본 20)]
 //
-// 태그 구성은 src/lib/personaVibe.ts의 PERSONA_VIBE_TAGS와 반드시 맞춰야 한다.
+// 태그 구성은 src/lib/personaTags.ts의 PERSONA_MOOD_TAGS와 반드시 맞춰야 한다. 이 스크립트는
+// 비용 관리를 위해 무드 태그 하나씩만 붙여서 생성한다 — 활동·생김새 등 추가 태그로 더 다양하게
+// 채우고 싶으면 비용이 들지 않는 scripts/upload-persona-image-pool.mjs(사람이 직접 만든
+// 이미지를 여러 태그로 올리는 스크립트)를 쓰는 걸 권장한다.
 
 import { randomUUID } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
@@ -91,7 +94,7 @@ async function main() {
         const { data: publicUrlData } = admin.storage.from(BUCKET).getPublicUrl(path)
         const { error: insertError } = await admin
           .from('persona_image_pool')
-          .insert({ tag, image_url: publicUrlData.publicUrl })
+          .insert({ tags: [tag], image_url: publicUrlData.publicUrl })
         if (insertError) throw insertError
 
         succeeded++

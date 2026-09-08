@@ -58,9 +58,9 @@
 - 파생값(마일스톤 카운트, 쿠폰 지급 여부 등)은 클라이언트 값을 신뢰하지 말고 **반드시 DB 트리거로 서버사이드 계산**할 것.
 - Vercel과 GitHub 저장소(eunbel22/diary_project)가 연결되어 있어 `main`에 머지되면 자동 배포됨(`vercel --prod` 수동 실행 불필요). 새 Supabase 마이그레이션이 있을 때만 별도로 적용할 것.
 - 리마인더·재알림류(저녁 리마인더, 지출 충동 일시정지, 밀린 일정/작업 분해 제안)는 실제 푸시·이메일 발송을 의도적으로 구현하지 않음 — ADHD 타겟에게는 알림 자체가 압박으로 느껴질 수 있어서다. 지출 충동 일시정지·밀린 일정/작업 분해 제안은 서버에 "대기 상태"만 저장해두고 사용자가 앱을 다음에 열었을 때 조용히 배너로만 보여준다(스케줄러 없음). 저녁 리마인더만 예외로 `vercel.json`에 등록된 Vercel Cron(`/api/reminder-candidates`, 매일 실행)이 대상자 목록을 매일 계산해서 로그로 남기지만, 실제 발송 연동은 아직 없음(TODO로 명시돼 있음).
-- 캐릭터 이미지는 사용자마다 실시간으로 Imagen을 호출하지 않고, 미리 만들어둔 이미지 풀(`persona_image_pool` 테이블 + `persona-image-pool` Storage 버킷)에서 톤·관심사로 정한 "느낌" 태그(`src/lib/personaVibe.ts`의 `PERSONA_VIBE_TAGS`)에 맞는 걸 골라 쓴다. 풀에 그 태그가 아직 없을 때만(시드 전 등) `api/generate-persona-image.ts`로 실시간 생성한다. 풀을 채우는 방법은 두 가지이고 **둘 다 사람이 직접, 필요할 때만** 실행할 것(Claude가 자동으로 실행하지 않음):
-  - `npm run seed:persona-images`(`scripts/seed-persona-image-pool.mjs`): Imagen API로 자동 생성(비용 발생, `GEMINI_API_KEY` 필요).
-  - `npm run seed:persona-images:manual`(`scripts/upload-persona-image-pool.mjs`): ChatGPT/Gemini 앱/나노바나나 등으로 사람이 직접 만든 이미지를 `persona-image-assets/<태그>/` 폴더에 넣고 그대로 업로드(Imagen 호출 없음, 사실상 무료). 태그 폴더명은 `PERSONA_VIBE_TAGS`와 정확히 일치해야 함.
+- 캐릭터 이미지는 사용자마다 실시간으로 Imagen을 호출하지 않고, 미리 만들어둔 이미지 풀(`persona_image_pool` 테이블 + `persona-image-pool` Storage 버킷)에서 골라 쓴다. 이미지 하나에는 태그가 여러 개 붙을 수 있다(예: 발랄함+먹는중+토끼). 톤·관심사로 정한 무드 태그(`src/lib/personaTags.ts`의 `PERSONA_MOOD_TAGS`, 항상 1개)와 활동 태그(`PERSONA_ACTIVITY_TAGS`, 관심사에 따라 0~2개)만 실제 매칭에 쓰이고, "토끼"처럼 정해진 목록에 없는 자유 태그는 매칭엔 안 쓰이지만 풀을 채우는 사람이 이미지를 구분해두는 용도로 자유롭게 붙일 수 있다. 매칭은 겹치는 태그 수가 가장 많은 이미지를 고르는 방식이라(`src/lib/personaImagePool.ts`), 풀에 이미지가 하나라도 있으면 완전히 안 겹쳐도 그중 하나를 골라 쓴다 — 풀이 아예 비어 있을 때만(시드 전 등) `api/generate-persona-image.ts`로 실시간 생성한다. 풀을 채우는 방법은 두 가지이고 **둘 다 사람이 직접, 필요할 때만** 실행할 것(Claude가 자동으로 실행하지 않음):
+  - `npm run seed:persona-images`(`scripts/seed-persona-image-pool.mjs`): Imagen API로 무드 태그 1개짜리 이미지를 자동 생성(비용 발생, `GEMINI_API_KEY` 필요). 태그 조합을 다양하게 늘리고 싶으면 비용이 안 드는 아래 수동 방식을 권장.
+  - `npm run seed:persona-images:manual`(`scripts/upload-persona-image-pool.mjs`): ChatGPT/Gemini 앱/나노바나나 등으로 사람이 직접 만든 이미지를 `persona-image-assets/<태그1>/<태그2>/.../` 처럼 폴더를 겹쳐서 넣으면 그 폴더 이름들이 그대로 태그가 되어 업로드됨(Imagen 호출 없음, 사실상 무료).
 
 ---
 
@@ -74,7 +74,7 @@
 | `raw_log` | `id`, `user_id`, `type`(소비/일정/할일/사건), `content`, `is_estimated`, `created_at` | 원본 발화와 추출된 값. **불변** — 수정 대신 `task_status`처럼 별도 테이블로 상태를 관리 |
 | `diary_entries` | `id`, `user_id`, `date`, `body`, `version`, `updated_at` | 생성된 다이어리 본문 |
 | `coupon` | `user_id`, `entry_count`, `milestone_reached`, `coupons_available`, `used_at`, `updated_at` | 누적 작성 횟수, 캐릭터 교체 쿠폰 상태 (서버 계산 전용 — 클라이언트는 읽기만 가능) |
-| `persona_image_pool` | `id`, `tag`, `image_url`, `created_at` | 사용자별 데이터가 아니라 앱 전체가 공유하는 자산. 태그별로 미리 생성해둔 캐릭터 이미지 목록(시드 스크립트 참고) |
+| `persona_image_pool` | `id`, `tags`(text 배열), `image_url`, `created_at` | 사용자별 데이터가 아니라 앱 전체가 공유하는 자산. 태그 조합별로 미리 만들어둔 캐릭터 이미지 목록(시드 스크립트 참고) |
 
 모든 테이블이 Supabase에 적용되어 있음(`supabase/migrations/0001_...` ~ `0016_persona_image_pool.sql`). 새 기능을 추가할 때는 새 마이그레이션 파일을 만들어 여기에 이어 붙일 것.
 
@@ -88,7 +88,7 @@
 | STT | 오디오 파일(멀티모달) | 텍스트 전사 결과 | 별도 STT API 없이 Gemini로 처리 |
 | NER/분류 | 전사된 텍스트 | 구조화된 JSON(항목·금액·날짜 등) | 필수 필드 누락 여부 함께 판별 |
 | 다이어리 생성·재작성 | 구조화 데이터 + 페르소나 톤 | 다이어리 문단(텍스트) | 재작성 시 이전 피드백을 프롬프트에 포함 |
-| 이미지 생성(Imagen) | "느낌" 태그(발랄함/차분함/따뜻함/씩씩함/몽글몽글함) | 이미지 파일 | `npm run seed:persona-images`로 이미지 풀을 채울 때만 호출. 사용자 온보딩/캐릭터 재구성 시점엔 이 풀에서 골라 쓰고, 풀에 없을 때만 `api/generate-persona-image.ts`로 실시간 호출(비용 관리) |
+| 이미지 생성(Imagen) | 무드 태그(발랄함/차분함/따뜻함/씩씩함/몽글몽글함) | 이미지 파일 | `npm run seed:persona-images`로 이미지 풀을 채울 때만 호출. 사용자 온보딩/캐릭터 재구성 시점엔 톤·관심사로 정한 태그(무드+활동)와 가장 많이 겹치는 이미지를 이 풀에서 골라 쓰고, 풀이 아예 비어 있을 때만 `api/generate-persona-image.ts`로 실시간 호출(비용 관리) |
 
 ---
 

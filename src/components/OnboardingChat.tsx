@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { sendOnboardingTurn } from '../lib/onboardingChat'
 import { pickPoolImage } from '../lib/personaImagePool'
-import { inferVibeTag } from '../lib/personaVibe'
+import { inferPersonaTags } from '../lib/personaTags'
 import { supabase } from '../supabaseClient'
 import type { AdhdScreeningResult, ChatMessage, Persona, PersonaDraft } from '../types'
 
@@ -33,8 +33,8 @@ export function OnboardingChat({ userId, screeningResult, onComplete }: Props) {
     try {
       // Imagen 실시간 호출은 비용이 들어서, 먼저 톤·관심사에 맞는 태그로 미리 생성해둔
       // 이미지 풀에서 골라 쓴다. 풀에 그 태그가 아직 없으면(시드 전 등) 그때만 실시간 생성으로 대체한다.
-      const vibeTag = inferVibeTag(draft.tone, draft.interests)
-      let imageUrl: string | null = await pickPoolImage(vibeTag)
+      const targetTags = inferPersonaTags(draft.tone, draft.interests)
+      let imageUrl: string | null = await pickPoolImage(targetTags)
 
       if (!imageUrl) {
         const imageRes = await fetch('/api/generate-persona-image', {
