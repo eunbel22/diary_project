@@ -178,7 +178,7 @@ export function ConsumptionTab({ userId }: Props) {
                 <input
                   defaultValue={category.name}
                   onBlur={(e) => handleRenameCategory(category.id, e.target.value)}
-                  className="flex-1 rounded-full border border-stone-200 px-3 py-1 text-xs outline-none focus:border-amber-400"
+                  className="min-w-0 flex-1 rounded-full border border-stone-200 px-3 py-1 text-xs outline-none focus:border-amber-400"
                 />
                 <button
                   type="button"
@@ -194,7 +194,7 @@ export function ConsumptionTab({ userId }: Props) {
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 placeholder="새 카테고리 이름"
-                className="flex-1 rounded-full border border-stone-200 px-3 py-1 text-xs outline-none focus:border-amber-400"
+                className="min-w-0 flex-1 rounded-full border border-stone-200 px-3 py-1 text-xs outline-none focus:border-amber-400"
               />
               <button
                 type="button"

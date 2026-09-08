@@ -577,7 +577,7 @@ export function DailyLogInput({
             value={newPhraseText}
             onChange={(e) => setNewPhraseText(e.target.value)}
             placeholder="자주 쓰는 말 추가 (예: 약 먹었어)"
-            className="flex-1 rounded-full border border-stone-200 px-4 py-2 text-sm outline-none focus:border-amber-400"
+            className="min-w-0 flex-1 rounded-full border border-stone-200 px-4 py-2 text-sm outline-none focus:border-amber-400"
           />
           <button
             type="button"
@@ -607,7 +607,7 @@ export function DailyLogInput({
                 value={amountInput}
                 onChange={(e) => setAmountInput(e.target.value)}
                 placeholder="금액(원)"
-                className="flex-1 rounded-full border border-stone-200 px-4 py-2 text-sm outline-none focus:border-amber-400"
+                className="min-w-0 flex-1 rounded-full border border-stone-200 px-4 py-2 text-sm outline-none focus:border-amber-400"
               />
               <button
                 type="button"
@@ -627,7 +627,7 @@ export function DailyLogInput({
               onChange={(e) => setInput(e.target.value)}
               placeholder="오늘 쓴 것, 잡힌 약속, 있었던 일을 편하게 말해주세요"
               disabled={submitting || recording}
-              className="flex-1 rounded-full border border-stone-200 px-4 py-2 text-sm outline-none focus:border-amber-400"
+              className="min-w-0 flex-1 rounded-full border border-stone-200 px-4 py-2 text-sm outline-none focus:border-amber-400"
             />
             <button
               type="button"
