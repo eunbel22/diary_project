@@ -92,7 +92,13 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   }
   const systemPrompt = req.body?.mode === 'rebuild' ? REBUILD_SYSTEM_PROMPT : INITIAL_SYSTEM_PROMPT
 
+  // 온보딩 대화가 왜 느린지(모델 자체 지연인지, 그 외 처리인지) 나중에 Vercel 로그에서
+  // 바로 구분할 수 있도록 Gemini 호출 구간과 핸들러 전체 구간의 소요 시간을 남긴다.
+  const handlerStart = Date.now()
+  const turnLabel = `mode=${req.body?.mode ?? 'initial'} turn=${messages.length}`
+
   try {
+    const geminiStart = Date.now()
     const geminiRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
       {
@@ -111,9 +117,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         }),
       },
     )
+    const geminiMs = Date.now() - geminiStart
 
     if (!geminiRes.ok) {
       const detail = await geminiRes.text()
+      console.error(`[onboarding-chat] ${turnLabel} gemini error after ${geminiMs}ms:`, detail)
       res.status(502).json({ error: 'Gemini API error', detail })
       return
     }
@@ -121,6 +129,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const data = await geminiRes.json()
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
     if (typeof text !== 'string') {
+      console.error(`[onboarding-chat] ${turnLabel} gemini returned no content after ${geminiMs}ms`)
       res.status(502).json({ error: 'Gemini API returned no content' })
       return
     }
@@ -129,8 +138,10 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     if (parsed.isComplete && parsed.persona) {
       parsed.persona = sanitizePersona(parsed.persona)
     }
+    console.log(`[onboarding-chat] ${turnLabel} gemini=${geminiMs}ms total=${Date.now() - handlerStart}ms`)
     res.status(200).json(parsed)
   } catch (err) {
+    console.error(`[onboarding-chat] ${turnLabel} failed after ${Date.now() - handlerStart}ms:`, err)
     res.status(500).json({ error: 'Failed to reach Gemini API', detail: String(err) })
   }
 }
