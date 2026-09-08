@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "seed:persona-images": "node scripts/seed-persona-image-pool.mjs"
+    "seed:persona-images": "node scripts/seed-persona-image-pool.mjs",
+    "seed:persona-images:manual": "node scripts/upload-persona-image-pool.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.113.0",
