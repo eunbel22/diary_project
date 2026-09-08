@@ -172,7 +172,7 @@ export function PersonaRebuildChat({ persona, onComplete }: Props) {
           onChange={(e) => setInput(e.target.value)}
           placeholder={sending ? '답을 생각하고 있어요...' : '편하게 답해주세요'}
           disabled={sending}
-          className={`flex-1 rounded-full border px-4 py-2 text-sm outline-none ${
+          className={`min-w-0 flex-1 rounded-full border px-4 py-2 text-sm outline-none ${
             sending
               ? 'cursor-not-allowed border-stone-200 bg-stone-100 text-stone-400'
               : 'border-stone-200 bg-white focus:border-amber-400'
