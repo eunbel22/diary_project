@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { sendOnboardingTurn } from '../lib/onboardingChat'
+import { pickPoolImage } from '../lib/personaImagePool'
+import { inferVibeTag } from '../lib/personaVibe'
 import { supabase } from '../supabaseClient'
 import type { ChatMessage, Persona, PersonaDraft } from '../types'
 
@@ -27,25 +29,32 @@ export function PersonaRebuildChat({ persona, onComplete }: Props) {
     setErrorMessage(null)
 
     try {
-      let imageUrl: string | null = persona.image_url
+      // Imagen 실시간 호출은 비용이 들어서, 먼저 톤·관심사에 맞는 태그로 미리 생성해둔
+      // 이미지 풀에서 골라 쓴다. 풀에 그 태그가 아직 없으면(시드 전 등) 그때만 실시간 생성으로 대체한다.
+      const vibeTag = inferVibeTag(draft.tone, draft.interests)
+      let imageUrl: string | null = await pickPoolImage(vibeTag)
 
-      const imageRes = await fetch('/api/generate-persona-image', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(draft),
-      })
+      if (!imageUrl) {
+        imageUrl = persona.image_url
 
-      if (imageRes.ok) {
-        const { imageBase64, mimeType } = await imageRes.json()
-        const bytes = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0))
-        const path = `${persona.user_id}/character.png`
-        const { error: uploadError } = await supabase.storage
-          .from('persona-images')
-          .upload(path, bytes, { contentType: mimeType ?? 'image/png', upsert: true })
+        const imageRes = await fetch('/api/generate-persona-image', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(draft),
+        })
 
-        if (!uploadError) {
-          const baseUrl = supabase.storage.from('persona-images').getPublicUrl(path).data.publicUrl
-          imageUrl = `${baseUrl}?v=${Date.now()}`
+        if (imageRes.ok) {
+          const { imageBase64, mimeType } = await imageRes.json()
+          const bytes = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0))
+          const path = `${persona.user_id}/character.png`
+          const { error: uploadError } = await supabase.storage
+            .from('persona-images')
+            .upload(path, bytes, { contentType: mimeType ?? 'image/png', upsert: true })
+
+          if (!uploadError) {
+            const baseUrl = supabase.storage.from('persona-images').getPublicUrl(path).data.publicUrl
+            imageUrl = `${baseUrl}?v=${Date.now()}`
+          }
         }
       }
       // 이미지 생성/업로드가 실패해도 이름·말투는 계속 반영되게 진행한다.
