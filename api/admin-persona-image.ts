@@ -68,6 +68,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     }
 
     try {
+      // 로컬 시드 스크립트들은 버킷을 미리 만들어두지만, 이 API는 웹에서 처음 올리는
+      // 경로일 수 있으니 버킷이 없으면 여기서도 만들어준다("already exists"는 정상 진행).
+      const { error: bucketError } = await admin.storage.createBucket(BUCKET, { public: true })
+      if (bucketError && !bucketError.message?.includes('already exists')) throw bucketError
+
       const bytes = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0))
       const ext = EXTENSION_BY_MIME[mimeType ?? ''] ?? 'png'
       const path = `${tags.join('-')}/${randomUUID()}.${ext}`
