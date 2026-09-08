@@ -19,9 +19,11 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 // 캐릭터 이미지 풀(persona_image_pool)에 이미지를 웹에서 바로 올리는 관리자 페이지.
-// /imageadd로 접근하며, 로그인해야만 볼 수 있다(App.tsx에서 세션 체크 후 렌더링).
-// 실제 쓰기 권한은 api/admin-persona-image.ts가 로그인 여부를 다시 확인한 뒤 service_role로 처리한다.
+// /imageadd로 접근하며, 구글 로그인만 하면 일단 이 화면까지는 오지만(App.tsx), 실제로
+// 허용된 계정인지는 api/admin-persona-image.ts가 ADMIN_EMAIL로 서버에서 검증한다.
+// 그 확인이 끝나기 전엔 업로드/삭제 UI를 보여주지 않는다.
 export function ImageAddAdmin() {
+  const [authorized, setAuthorized] = useState<boolean | null>(null)
   const [images, setImages] = useState<PoolImage[]>([])
   const [loadingList, setLoadingList] = useState(true)
   const [selectedMood, setSelectedMood] = useState<string | null>(null)
@@ -31,6 +33,21 @@ export function ImageAddAdmin() {
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const checkAuthorized = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session) {
+      setAuthorized(false)
+      return
+    }
+    const res = await fetch('/api/admin-persona-image', {
+      method: 'GET',
+      headers: { authorization: `Bearer ${session.access_token}` },
+    })
+    setAuthorized(res.ok)
+  }
 
   const loadImages = async () => {
     const { data } = await supabase
@@ -42,6 +59,7 @@ export function ImageAddAdmin() {
   }
 
   useEffect(() => {
+    checkAuthorized()
     loadImages()
   }, [])
 
@@ -119,6 +137,29 @@ export function ImageAddAdmin() {
     } finally {
       setDeletingId(null)
     }
+  }
+
+  if (authorized === null) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-amber-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-200 border-t-amber-500" />
+      </div>
+    )
+  }
+
+  if (authorized === false) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-amber-50 px-4 text-center">
+        <p className="text-sm text-stone-600">이 계정은 관리자 권한이 없어요.</p>
+        <button
+          type="button"
+          onClick={() => supabase.auth.signOut()}
+          className="rounded-full bg-stone-100 px-4 py-2 text-sm text-stone-600"
+        >
+          다른 계정으로 로그인
+        </button>
+      </div>
+    )
   }
 
   return (

@@ -33,9 +33,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     return
   }
 
-  // 관리자 페이지(/imageadd)는 로그인만 요구하고, 실제 쓰기 권한은 여기서 확인한다.
-  // persona_image_pool은 service_role로만 쓸 수 있어서(RLS), 로그인 여부를 서버에서
-  // 직접 검증한 뒤에만 service_role 클라이언트로 작업한다.
+  // 관리자 페이지(/imageadd)는 특정 구글 계정 하나로만 제한한다. persona_image_pool은
+  // service_role로만 쓸 수 있어서(RLS), 로그인 + 허용된 이메일인지를 서버에서 직접 검증한
+  // 뒤에만 service_role 클라이언트로 작업한다. ADMIN_EMAIL이 설정 안 돼 있으면 아무도 통과
+  // 못 하게 막는다(허용 목록이 없으면 전부 거부 — 열어두는 쪽으로 실패하지 않게).
+  const adminEmail = process.env.ADMIN_EMAIL
   const admin = createClient(supabaseUrl, serviceRoleKey)
   const authHeader = req.headers.authorization
   const token = typeof authHeader === 'string' ? authHeader.replace(/^Bearer\s+/i, '') : undefined
@@ -46,6 +48,15 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   const { data: userData, error: authError } = await admin.auth.getUser(token)
   if (authError || !userData.user) {
     res.status(401).json({ error: 'Unauthorized' })
+    return
+  }
+  if (!adminEmail || userData.user.email !== adminEmail) {
+    res.status(403).json({ error: 'Forbidden' })
+    return
+  }
+
+  if (req.method === 'GET') {
+    res.status(200).json({ authorized: true })
     return
   }
 
