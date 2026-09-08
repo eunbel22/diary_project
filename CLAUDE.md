@@ -61,6 +61,7 @@
 - 캐릭터 이미지는 사용자마다 실시간으로 Imagen을 호출하지 않고, 미리 만들어둔 이미지 풀(`persona_image_pool` 테이블 + `persona-image-pool` Storage 버킷)에서 골라 쓴다. 이미지 하나에는 태그가 여러 개 붙을 수 있다(예: 발랄함+먹는중+토끼). 톤·관심사로 정한 무드 태그(`src/lib/personaTags.ts`의 `PERSONA_MOOD_TAGS`, 항상 1개)와 활동 태그(`PERSONA_ACTIVITY_TAGS`, 관심사에 따라 0~2개)만 실제 매칭에 쓰이고, "토끼"처럼 정해진 목록에 없는 자유 태그는 매칭엔 안 쓰이지만 풀을 채우는 사람이 이미지를 구분해두는 용도로 자유롭게 붙일 수 있다. 매칭은 겹치는 태그 수가 가장 많은 이미지를 고르는 방식이라(`src/lib/personaImagePool.ts`), 풀에 이미지가 하나라도 있으면 완전히 안 겹쳐도 그중 하나를 골라 쓴다 — 풀이 아예 비어 있을 때만(시드 전 등) `api/generate-persona-image.ts`로 실시간 생성한다. 풀을 채우는 방법은 두 가지이고 **둘 다 사람이 직접, 필요할 때만** 실행할 것(Claude가 자동으로 실행하지 않음):
   - `npm run seed:persona-images`(`scripts/seed-persona-image-pool.mjs`): Imagen API로 무드 태그 1개짜리 이미지를 자동 생성(비용 발생, `GEMINI_API_KEY` 필요). 태그 조합을 다양하게 늘리고 싶으면 비용이 안 드는 아래 수동 방식을 권장.
   - `npm run seed:persona-images:manual`(`scripts/upload-persona-image-pool.mjs`): ChatGPT/Gemini 앱/나노바나나 등으로 사람이 직접 만든 이미지를 `persona-image-assets/<태그1>/<태그2>/.../` 처럼 폴더를 겹쳐서 넣으면 그 폴더 이름들이 그대로 태그가 되어 업로드됨(Imagen 호출 없음, 사실상 무료).
+  - `/imageadd` 웹 관리자 페이지(`src/components/ImageAddAdmin.tsx` + `api/admin-persona-image.ts`): 로컬 스크립트 대신 배포된 사이트에서 바로 이미지+태그를 올리고 목록을 보거나 지울 수 있음. 로그인해야만 들어갈 수 있지만(비로그인 시 `AuthScreen`으로 막힘) **별도 관리자 권한 구분은 없어서, 로그인한 사용자라면(=가입한 앱 사용자 누구든) 접근 가능** — 포트폴리오 데모 수준의 보호이며, 더 엄격하게 막고 싶으면 특정 이메일만 허용하는 로직을 `ImageAddAdmin`/`admin-persona-image.ts`에 추가해야 함. `persona_image_pool`은 `service_role`만 쓸 수 있어서(RLS), 실제 업로드/삭제는 `api/admin-persona-image.ts`가 요청자의 로그인 토큰을 검증한 뒤 서버에서 `service_role`로 처리함.
 
 ---
 

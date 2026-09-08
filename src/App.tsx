@@ -4,6 +4,7 @@ import { AuthScreen } from './components/AuthScreen'
 import { ConsumptionTab } from './components/ConsumptionTab'
 import { DailyLogInput } from './components/DailyLogInput'
 import { DiaryTab } from './components/DiaryTab'
+import { ImageAddAdmin } from './components/ImageAddAdmin'
 import { OnboardingChat } from './components/OnboardingChat'
 import { PersonaAvatar } from './components/PersonaAvatar'
 import { ScheduleTab } from './components/ScheduleTab'
@@ -126,6 +127,14 @@ function App() {
   }, [session])
 
   if (loading) return <LoadingScreen />
+
+  // 캐릭터 이미지 풀을 채우는 관리자 페이지. 로그인만 하면 볼 수 있고(별도 관리자 권한 구분은
+  // 없음), 온보딩·페르소나 여부와 무관하게 독립적으로 동작한다.
+  if (window.location.pathname === '/imageadd') {
+    if (!session) return <AuthScreen />
+    return <ImageAddAdmin />
+  }
+
   if (!session) return <AuthScreen />
   if (persona === undefined) return <LoadingScreen />
   if (!persona) {
