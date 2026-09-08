@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
+import { sendOnboardingTurn } from '../lib/onboardingChat'
 import { supabase } from '../supabaseClient'
-import type { AdhdScreeningResult, ChatMessage, OnboardingTurnResponse, Persona, PersonaDraft } from '../types'
+import type { AdhdScreeningResult, ChatMessage, Persona, PersonaDraft } from '../types'
 
 const OPENING_MESSAGE =
   '안녕하세요! 저는 아직 이름이 없어요. 당신과 대화하면서 저의 성격과 말투를 정하고 싶어요. 정답은 없으니 편하게 얘기해주세요 — 요즘 어떤 걸 하면 기분이 좋아지나요?'
@@ -20,6 +21,7 @@ export function OnboardingChat({ userId, screeningResult, onComplete }: Props) {
   const [stage, setStage] = useState<'chat' | 'drawing' | 'reminder' | 'error'>('chat')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [lastDraft, setLastDraft] = useState<PersonaDraft | null>(null)
+  const [retryMessages, setRetryMessages] = useState<ChatMessage[] | null>(null)
   const [createdPersona, setCreatedPersona] = useState<Persona | null>(null)
 
   const finishOnboarding = async (draft: PersonaDraft) => {
@@ -96,39 +98,42 @@ export function OnboardingChat({ userId, screeningResult, onComplete }: Props) {
     }
   }
 
-  const handleSubmit = async (e: FormEvent) => {
+  const sendTurn = async (nextMessages: ChatMessage[]) => {
+    setSending(true)
+    setErrorMessage(null)
+
+    const result = await sendOnboardingTurn(nextMessages)
+    setSending(false)
+
+    if (!result.ok) {
+      setStage('error')
+      setRetryMessages(nextMessages)
+      setErrorMessage(
+        result.timedOut
+          ? '응답이 너무 오래 걸리고 있어요. 다시 시도해주세요.'
+          : '대화를 이어가는 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.',
+      )
+      return
+    }
+
+    setRetryMessages(null)
+    const turn = result.turn
+    setMessages([...nextMessages, { role: 'model', content: turn.assistantMessage }])
+
+    if (turn.isComplete && turn.persona) {
+      setLastDraft(turn.persona)
+      await finishOnboarding(turn.persona)
+    }
+  }
+
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     if (!input.trim() || sending) return
 
     const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: input.trim() }]
     setMessages(nextMessages)
     setInput('')
-    setSending(true)
-    setErrorMessage(null)
-
-    try {
-      const res = await fetch('/api/onboarding-chat', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ messages: nextMessages }),
-      })
-
-      if (!res.ok) throw new Error('온보딩 응답을 가져오지 못했어요.')
-
-      const turn: OnboardingTurnResponse = await res.json()
-      setMessages([...nextMessages, { role: 'model', content: turn.assistantMessage }])
-
-      if (turn.isComplete && turn.persona) {
-        setLastDraft(turn.persona)
-        await finishOnboarding(turn.persona)
-      }
-    } catch (err) {
-      setStage('error')
-      setErrorMessage('대화를 이어가는 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.')
-      console.error(err)
-    } finally {
-      setSending(false)
-    }
+    sendTurn(nextMessages)
   }
 
   if (stage === 'drawing') {
@@ -201,6 +206,15 @@ export function OnboardingChat({ userId, screeningResult, onComplete }: Props) {
               <button
                 type="button"
                 onClick={() => finishOnboarding(lastDraft)}
+                className="text-xs text-amber-600 underline"
+              >
+                다시 시도하기
+              </button>
+            )}
+            {!lastDraft && retryMessages && (
+              <button
+                type="button"
+                onClick={() => sendTurn(retryMessages)}
                 className="text-xs text-amber-600 underline"
               >
                 다시 시도하기
