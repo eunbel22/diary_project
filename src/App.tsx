@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { AdhdScreening } from './components/AdhdScreening'
+import { AdminAuthScreen } from './components/AdminAuthScreen'
 import { AuthScreen } from './components/AuthScreen'
 import { ConsumptionTab } from './components/ConsumptionTab'
 import { DailyLogInput } from './components/DailyLogInput'
 import { DiaryTab } from './components/DiaryTab'
+import { ImageAddAdmin } from './components/ImageAddAdmin'
 import { OnboardingChat } from './components/OnboardingChat'
 import { PersonaAvatar } from './components/PersonaAvatar'
 import { ScheduleTab } from './components/ScheduleTab'
@@ -126,6 +128,15 @@ function App() {
   }, [session])
 
   if (loading) return <LoadingScreen />
+
+  // 캐릭터 이미지 풀을 채우는 관리자 페이지. 일반 사용자용 이메일/비밀번호 로그인과 분리된
+  // 구글 전용 로그인을 쓰고, 실제로 어떤 계정만 쓸 수 있는지는 서버(ADMIN_EMAIL)가 검증한다.
+  // 온보딩·페르소나 여부와 무관하게 독립적으로 동작한다.
+  if (window.location.pathname === '/imageadd') {
+    if (!session) return <AdminAuthScreen />
+    return <ImageAddAdmin />
+  }
+
   if (!session) return <AuthScreen />
   if (persona === undefined) return <LoadingScreen />
   if (!persona) {

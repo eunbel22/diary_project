@@ -9,6 +9,10 @@ lerna-debug.log*
 
 .env
 
+# 캐릭터 이미지 풀 시드용으로 직접 만들어 임시로 넣어두는 원본 이미지(업로드 스크립트가
+# Supabase Storage로 올리고 나면 여기 둘 필요가 없다).
+persona-image-assets
+
 node_modules
 dist
 dist-ssr

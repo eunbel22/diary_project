@@ -4,5 +4,8 @@
       "path": "/api/reminder-candidates",
       "schedule": "0 12 * * *"
     }
+  ],
+  "rewrites": [
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
