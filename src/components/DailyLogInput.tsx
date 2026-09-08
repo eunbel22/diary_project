@@ -301,19 +301,23 @@ export function DailyLogInput({
   }
 
   // "이거 사고 싶어" 같은 구매 욕구가 감지되면(옵트인 상태일 때만), 바로 판단하지 않고
-  // 설정한 시간 뒤에 한 번 더 물어볼 수 있게 대기열에 넣는다. 가격이 언급되지 않았거나
-  // 기준 금액에 못 미치면 반응하지 않는다.
+  // 설정한 시간 뒤에 한 번 더 물어볼 수 있게 대기열에 넣는다. 가격을 말했다면 기준 금액
+  // 이상일 때만 반응하고, 가격이 없어도 왜 사고 싶은지 이유를 같이 말했다면 그 이유만으로도
+  // 반응한다(가격도 이유도 없으면 반응하지 않는다).
   const tryQueuePurchasePause = async (entry: StructuredEntry) => {
     if (!purchasePauseEnabled) return
     const amount = entry.content.amount
-    if (amount == null || amount < (purchasePauseMinAmount ?? 0)) return
+    const reason = entry.content.reason
+    const meetsAmountThreshold = amount != null && amount >= (purchasePauseMinAmount ?? 0)
+    if (!meetsAmountThreshold && !reason) return
 
     const waitHours = purchasePauseWaitHours ?? 24
     const remindAt = new Date(Date.now() + waitHours * 60 * 60 * 1000).toISOString()
     await supabase.from('purchase_pause').insert({
       user_id: userId,
       item: entry.content.item ?? entry.content.description ?? '그 물건',
-      amount,
+      amount: amount ?? null,
+      reason: reason ?? null,
       remind_at: remindAt,
     })
   }
@@ -524,8 +528,9 @@ export function DailyLogInput({
         <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl bg-amber-100 px-4 py-3 text-sm text-amber-800">
           <span>
             '{duePauses[0].item}'
-            {duePauses[0].amount != null ? ` (${duePauses[0].amount.toLocaleString()}원)` : ''} 아직 생각하고
-            있어요? 그때 마음이 여전한지만 살짝 확인해봐요.
+            {duePauses[0].amount != null ? ` (${duePauses[0].amount.toLocaleString()}원)` : ''}
+            {duePauses[0].reason ? ` — ${duePauses[0].reason}` : ''} 아직 생각하고 있어요? 그때
+            마음이 여전한지만 살짝 확인해봐요.
           </span>
           <button
             type="button"

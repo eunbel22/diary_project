@@ -65,6 +65,7 @@ function sanitizeContent(content: RawLogContent): RawLogContent {
     title: clean(content.title),
     description: clean(content.description),
     emotion: clean(content.emotion),
+    reason: clean(content.reason),
   }
 }
 
@@ -96,6 +97,9 @@ function buildSystemPrompt(today: string) {
   표현하는 말이면 그 항목의 isPurchaseIntent를 true로 하고, content.item에 무엇을 사고
   싶은지, 가격이 언급됐다면 content.amount에 그 금액을 담습니다(언급 없으면 비워둡니다).
   이런 경우 아직 돈을 쓴 게 아니므로 type은 event입니다.
+- 왜 사고 싶은지 이유가 같이 언급됐다면(예: "스트레스 받아서", "예뻐서", "세일해서",
+  "필요해서") content.reason에 그 이유를 짧게 담습니다. 이유가 없으면 비워두고, 이유를
+  지어내지 않습니다.
 - 이미 실제로 산 이야기(과거형, "샀어")는 구매 욕구가 아니라 일반 소비(consumption)입니다.
 - 구매 욕구가 아니면 isPurchaseIntent는 항상 false입니다.
 
@@ -136,6 +140,7 @@ const RESPONSE_SCHEMA = {
               title: { type: 'STRING' },
               description: { type: 'STRING' },
               emotion: { type: 'STRING' },
+              reason: { type: 'STRING' },
             },
           },
           isEstimated: { type: 'BOOLEAN' },

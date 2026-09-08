@@ -63,6 +63,7 @@ export interface RawLogContent {
   emotion?: string
   raw_text?: string
   recurring?: 'yearly'
+  reason?: string
 }
 
 export interface RawLog {
@@ -148,6 +149,7 @@ export interface PurchasePause {
   user_id: string
   item: string
   amount: number | null
+  reason: string | null
   created_at: string
   remind_at: string
   resolved: boolean
