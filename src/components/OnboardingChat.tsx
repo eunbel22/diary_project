@@ -183,8 +183,13 @@ export function OnboardingChat({ userId, screeningResult, onComplete }: Props) {
             </div>
           ))}
           {sending && (
-            <div className="max-w-[85%] self-start rounded-2xl rounded-bl-sm bg-white px-4 py-2 text-sm text-stone-400 shadow-sm">
-              ...
+            <div className="flex max-w-[85%] items-center gap-2 self-start rounded-2xl rounded-bl-sm bg-white px-4 py-2 text-sm text-stone-400 shadow-sm">
+              <span className="flex gap-1">
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-stone-300 [animation-delay:-0.3s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-stone-300 [animation-delay:-0.15s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-stone-300" />
+              </span>
+              생각하고 있어요...
             </div>
           )}
         </div>
@@ -208,16 +213,24 @@ export function OnboardingChat({ userId, screeningResult, onComplete }: Props) {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="편하게 답해주세요"
+            placeholder={sending ? '답을 생각하고 있어요...' : '편하게 답해주세요'}
             disabled={sending}
-            className="flex-1 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm outline-none focus:border-amber-400"
+            className={`flex-1 rounded-full border px-4 py-2 text-sm outline-none ${
+              sending
+                ? 'cursor-not-allowed border-stone-200 bg-stone-100 text-stone-400'
+                : 'border-stone-200 bg-white focus:border-amber-400'
+            }`}
           />
           <button
             type="submit"
             disabled={sending || !input.trim()}
-            className="rounded-full bg-amber-500 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="flex items-center justify-center rounded-full bg-amber-500 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
-            보내기
+            {sending ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+            ) : (
+              '보내기'
+            )}
           </button>
         </form>
       </div>

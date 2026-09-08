@@ -3,7 +3,10 @@ import type { ChatMessage, OnboardingTurnResponse, PersonaDraft } from '../src/t
 
 const GEMINI_MODEL = 'gemini-3.5-flash-lite'
 
-const COMMON_RULES = `- 재촉하거나 훈계하거나 완벽주의를 유도하는 표현을 절대 쓰지 않습니다.
+const COMMON_RULES = `- 한 턴(assistantMessage)에는 질문을 하나만 합니다. 여러 개를 한꺼번에 묻지 않습니다 —
+  사용자가 그중 하나만 답하면 나머지 질문은 그냥 흘러가 버려서 대화가 꼬입니다.
+  더 물어보고 싶은 게 있어도 다음 턴으로 미룹니다.
+- 재촉하거나 훈계하거나 완벽주의를 유도하는 표현을 절대 쓰지 않습니다.
 - 판단하거나 평가하는 말투를 쓰지 않습니다. 항상 다정하고 편안한 톤을 유지합니다.
 - 사용자가 캐릭터 이름을 정하지 않았다면, 대화 내용을 바탕으로 부드러운 이름을 제안합니다.
 - 마지막 턴에는 isComplete를 true로 하고 persona 필드(name, tone, interests)를 반드시 채웁니다.
