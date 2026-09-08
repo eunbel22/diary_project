@@ -183,6 +183,7 @@ export function DailyLogInput({
           personaName,
           personaTone,
           title: log.content.title,
+          context: log.content.raw_text ?? log.content.description,
           detail: taskBreakdownDetail,
         }),
       })

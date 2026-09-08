@@ -12,6 +12,7 @@ interface GenerateTaskBreakdownRequest {
   personaName?: string
   personaTone?: string
   title?: string
+  context?: string
   detail?: TaskBreakdownDetail
 }
 
@@ -25,14 +26,27 @@ interface ApiResponse {
   json: (body: unknown) => void
 }
 
-function buildPrompt(personaName: string, personaTone: string, title: string, detail: TaskBreakdownDetail) {
+function buildPrompt(
+  personaName: string,
+  personaTone: string,
+  title: string,
+  context: string | undefined,
+  detail: TaskBreakdownDetail,
+) {
   const { min, max } = STEP_COUNT[detail]
+  const contextLine = context
+    ? `\n사용자가 이 할일을 이렇게 말했습니다: "${context}". 여기 드러난 구체적인 내용(무엇을, 왜, 어떻게)을
+최대한 활용해서 이 사람만의 상황에 맞는 단계로 나눠주세요.`
+    : ''
+
   return `당신은 사용자의 다이어리 캐릭터 "${personaName}"입니다. 말투와 성격: ${personaTone}.
-사용자가 "${title}"라는 할일을 앞두고 있습니다. 이 할일을 실제로 시작하기 쉽게, 순서대로 실행할 수 있는
-아주 구체적인 작은 단계 ${min}~${max}개로 나눠주세요.
+사용자가 "${title}"라는 할일을 앞두고 있습니다.${contextLine}
+이 할일을 실제로 시작하기 쉽게, 순서대로 실행할 수 있는 아주 구체적인 작은 단계 ${min}~${max}개로 나눠주세요.
 
 반드시 지킬 규칙:
-- 각 단계는 그 자체로 바로 시작할 수 있는 짧고 구체적인 행동이어야 합니다(예: "책상 위 물건 다 치우기").
+- "계획 세우기", "준비하기", "검토하기", "마무리하기"처럼 어떤 할일에나 그대로 붙일 수 있는 막연하고
+  일반적인 표현은 쓰지 않습니다. 오직 "${title}"이라는 이 할일에만 해당하는, 손으로 바로 옮길 수 있는
+  구체적인 행동으로 적습니다(예: "발표 슬라이드 목차 3줄 적기"처럼 실제로 뭘 하는지 명확하게).
 - 순서대로 하면 "${title}"이 자연스럽게 끝나도록 나눕니다.
 - 재촉하거나 훈계하거나 완벽주의를 유도하는 표현을 쓰지 않습니다. 판단하거나 평가하지 않습니다.
 - 각 단계는 15자 내외의 짧은 문장으로 씁니다.`
@@ -58,14 +72,14 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     return
   }
 
-  const { personaName, personaTone, title, detail } = req.body ?? {}
+  const { personaName, personaTone, title, context, detail } = req.body ?? {}
   if (!personaName || !personaTone || !title) {
     res.status(400).json({ error: 'personaName, personaTone and title are required' })
     return
   }
 
   const resolvedDetail: TaskBreakdownDetail = detail === 'detailed' ? 'detailed' : 'simple'
-  const prompt = buildPrompt(personaName, personaTone, title, resolvedDetail)
+  const prompt = buildPrompt(personaName, personaTone, title, context, resolvedDetail)
 
   try {
     const geminiRes = await fetch(
