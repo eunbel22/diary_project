@@ -103,6 +103,7 @@ export function ImageAddAdmin() {
       if (!session) throw new Error('로그인이 필요해요.')
 
       let succeeded = 0
+      let firstError: string | null = null
       for (const file of files) {
         const imageBase64 = await fileToBase64(file)
         const res = await fetch('/api/admin-persona-image', {
@@ -113,9 +114,18 @@ export function ImageAddAdmin() {
           },
           body: JSON.stringify({ imageBase64, mimeType: file.type, tags }),
         })
-        if (res.ok) succeeded++
+        if (res.ok) {
+          succeeded++
+        } else if (!firstError) {
+          const body = await res.json().catch(() => null)
+          firstError = body?.detail ?? body?.error ?? `HTTP ${res.status}`
+        }
       }
-      setMessage(`${succeeded}/${files.length}장 업로드 완료`)
+      setMessage(
+        firstError
+          ? `${succeeded}/${files.length}장 업로드 완료 — 실패 이유: ${firstError}`
+          : `${succeeded}/${files.length}장 업로드 완료`,
+      )
       setFiles([])
       await loadImages()
     } catch (err) {
