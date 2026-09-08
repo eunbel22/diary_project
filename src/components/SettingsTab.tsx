@@ -384,9 +384,10 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
           <div>
             <p className="text-sm font-medium text-stone-700">지출 충동 일시정지</p>
             <p className="mt-0.5 text-xs text-stone-400">
-              "이거 얼마인데 사고 싶어"처럼 사려는 물건과 가격을 같이 말하면(가격이 없으면
-              작동하지 않아요), 그 금액이 아래 기준 이상일 때만 바로 판단하지 않고 설정한 시간
-              뒤에 한 번 더 살짝 물어봐요.
+              "이거 얼마인데 사고 싶어"처럼 가격을 같이 말하면 그 금액이 아래 기준 이상일 때,
+              가격을 말하지 않아도 "스트레스 받아서 사고 싶어"처럼 이유를 같이 말하면 그 이유만
+              으로도 바로 판단하지 않고 설정한 시간 뒤에 한 번 더 살짝 물어봐요. 가격도 이유도
+              없으면 반응하지 않아요.
             </p>
           </div>
           <button
@@ -413,7 +414,7 @@ export function SettingsTab({ persona, onPersonaUpdated, onSignOut }: Props) {
               </select>
             </div>
             <div className="flex items-center justify-between">
-              <p className="text-xs text-stone-500">이 금액 이상일 때만</p>
+              <p className="text-xs text-stone-500">가격을 말했을 땐 이 금액 이상일 때만</p>
               <div className="flex items-center gap-1">
                 <input
                   type="number"
